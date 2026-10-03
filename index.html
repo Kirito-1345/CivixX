@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="de">
 <head>
   <meta charset="utf-8">
@@ -6,90 +6,180 @@
   <title>CivixX – Bildungseinrichtungen in Leipzig</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <style>
-    html, body { margin: 0; height: 100%; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #1f2937;
+    }
+
     #map { width: 100%; height: 100vh; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     #controls {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 12px;
+      left: 12px;
       z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 8px;
-      background: white;
-      border-radius: 4px;
-      box-shadow: 0 1px 5px rgba(0,0,0,.4);
+      width: min(340px, calc(100vw - 24px));
+      padding: 10px;
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid rgba(15, 23, 42, .12);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+      box-sizing: border-box;
     }
+
     #search { display: flex; gap: 6px; }
-    #search input { width: 220px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-    #search button, #location-button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer; }
-    #search button:hover, #location-button:hover { background: #e5e5e5; }
-    #message { display: none; padding: 6px; border-radius: 4px; background: #fde8e8; color: #b00020; }
+
+    #search input {
+      flex: 1;
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+    }
+
+    button {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #f3f4f6;
+      color: #1f2937;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) { background: #e5e7eb; }
+    button:disabled { cursor: not-allowed; opacity: .65; }
+
+    #location-button { width: 100%; margin-top: 6px; }
+
+    #message {
+      display: none;
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    #message:empty { display: none; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div id="controls">
-    <form id="search">
-      <input type="text" placeholder="Adresse suchen" required>
-      <button type="submit">Suchen</button>
+
+  <section id="controls" aria-label="Kartensteuerung">
+    <form id="search" role="search">
+      <label class="sr-only" for="address">Adresse suchen</label>
+      <input id="address" name="address" type="search" placeholder="Adresse in Leipzig suchen" autocomplete="street-address" required>
+      <button id="search-button" type="submit">Suchen</button>
     </form>
-    <button type="button" id="location-button">Mein Standort</button>
-    <div id="message"></div>
-  </div>
+    <button id="location-button" type="button">Mein Standort</button>
+    <p id="message" role="status" aria-live="polite"></p>
+  </section>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script>
-    const maxBounds = [[51.12, 12.00], [51.56, 12.75]];
-    const map = L.map('map', { maxBounds, maxBoundsViscosity: 1 }).setView([51.3397, 12.3731], 12);
+    'use strict';
+
+    const maxBounds = L.latLngBounds([51.12, 12.00], [51.56, 12.75]);
+    const map = L.map('map', {
+      maxBounds,
+      maxBoundsViscosity: 0.8,
+      zoomControl: true
+    }).setView([51.3397, 12.3731], 12);
+
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       minZoom: 10,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
     }).addTo(map);
 
-    let marker = null;
     const message = document.getElementById('message');
     const form = document.getElementById('search');
-    const input = form.querySelector('input');
+    const addressInput = document.getElementById('address');
+    const searchButton = document.getElementById('search-button');
     const locationButton = document.getElementById('location-button');
+    const markers = L.layerGroup().addTo(map);
+
+    let searchAbortController = null;
+    let messageTimer = null;
 
     function showMessage(text) {
+      clearTimeout(messageTimer);
       message.textContent = text;
       message.style.display = 'block';
-      setTimeout(() => { message.style.display = 'none'; }, 4000);
+      messageTimer = setTimeout(() => {
+        message.style.display = 'none';
+        message.textContent = '';
+      }, 5000);
     }
 
     function setMarker(lat, lon, text) {
-      if (marker) marker.remove();
-      marker = L.marker([lat, lon]).addTo(map).bindPopup(text);
-      return marker;
+      markers.clearLayers();
+      return L.marker([lat, lon], { title: text }).addTo(markers).bindPopup(text);
+    }
+
+    async function geocode(query) {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'jsonv2');
+      url.searchParams.set('limit', '1');
+      url.searchParams.set('countrycodes', 'de');
+      url.searchParams.set('viewbox', `${maxBounds.getWest()},${maxBounds.getNorth()},${maxBounds.getEast()},${maxBounds.getSouth()}`);
+      url.searchParams.set('bounded', '1');
+
+      const response = await fetch(url, { signal: searchAbortController.signal });
+      if (!response.ok) throw new Error('network');
+      const results = await response.json();
+      return results.length ? results[0] : null;
+    }
+
+    async function searchAddress(query) {
+      searchAbortController?.abort();
+      searchAbortController = new AbortController();
+      searchButton.disabled = true;
+
+      try {
+        const result = await geocode(query);
+        if (!result) {
+          showMessage('Keine Adresse gefunden.');
+          return;
+        }
+
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        if (!maxBounds.contains([lat, lon])) {
+          showMessage('Die Adresse liegt außerhalb des Kartenbereichs.');
+          return;
+        }
+
+        map.setView([lat, lon], 15);
+        setMarker(lat, lon, result.display_name);
+      } catch (error) {
+        if (error.name !== 'AbortError') showMessage('Suche ist fehlgeschlagen. Bitte später erneut versuchen.');
+      } finally {
+        searchButton.disabled = false;
+      }
     }
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
-      const query = input.value.trim();
-      if (!query) return;
-
-      const url = new URL('https://nominatim.openstreetmap.org/search');
-      url.searchParams.set('q', query);
-      url.searchParams.set('format', 'json');
-      url.searchParams.set('countrycodes', 'de');
-      url.searchParams.set('viewbox', `${maxBounds[0][1]},${maxBounds[0][0]},${maxBounds[1][1]},${maxBounds[1][0]}`);
-      url.searchParams.set('bounded', '1');
-
-      const response = await fetch(url);
-      const results = await response.json();
-      if (!results.length) {
-        showMessage('Keine Adresse gefunden.');
-        return;
-      }
-
-      const result = results[0];
-      const lat = parseFloat(result.lat);
-      const lon = parseFloat(result.lon);
-      map.setView([lat, lon], 15);
-      setMarker(lat, lon, result.display_name);
+      const query = addressInput.value.trim();
+      if (query) await searchAddress(query);
     });
 
     locationButton.addEventListener('click', () => {
@@ -97,17 +187,22 @@
         showMessage('Geolokalisierung wird nicht unterstützt.');
         return;
       }
-      navigator.geolocation.getCurrentPosition(position => {
-        const { latitude: lat, longitude: lon } = position.coords;
-        if (!map.getBounds().contains([lat, lon])) {
-          showMessage('Der Standort liegt außerhalb des Kartenbereichs.');
-          return;
-        }
-        map.setView([lat, lon], 15);
-        setMarker(lat, lon, 'Mein Standort');
-      }, () => {
-        showMessage('Standort konnte nicht ermittelt werden.');
-      });
+
+      locationButton.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const { latitude: lat, longitude: lon } = position.coords;
+          if (!maxBounds.contains([lat, lon])) {
+            showMessage('Der Standort liegt außerhalb des Kartenbereichs.');
+            return;
+          }
+          map.setView([lat, lon], 15);
+          setMarker(lat, lon, 'Mein Standort');
+        },
+        () => showMessage('Standort konnte nicht ermittelt werden.'),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+      locationButton.disabled = false;
     });
 
     map.on('click', event => {
