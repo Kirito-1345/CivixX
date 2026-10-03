@@ -1,3 +1,3 @@
-# CivixX
+﻿# CivixX
 
-CivixX is building an interactive map that displays educational institutions in and around Leipzig. The map is designed to help users explore local education options and find relevant institutions across the region.
+CivixX entwickelt eine interaktive Karte, die Bildungseinrichtungen in und um Leipzig anzeigt. Die Karte soll Nutzer dabei unterstützen, lokale Bildungsangebote zu entdecken und passende Einrichtungen in der Region zu finden.
