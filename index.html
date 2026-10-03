@@ -8,12 +8,58 @@
   <style>
     html, body {
       margin: 0;
-      height: 100%;
+      min-height: 100%;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: #111827;
+      background: #eef4ff;
     }
 
-    #map { width: 100%; height: 100vh; }
+    #background {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, .28), transparent 28%),
+        radial-gradient(circle at 85% 25%, rgba(16, 185, 129, .22), transparent 30%),
+        radial-gradient(circle at 70% 85%, rgba(139, 92, 246, .24), transparent 32%),
+        linear-gradient(135deg, #eff6ff, #f5f3ff 45%, #ecfdf5);
+      background-size: 180% 180%, 180% 180%, 180% 180%, 100% 100%;
+      animation: move-background 18s ease-in-out infinite alternate;
+    }
+
+    #background::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background:
+        conic-gradient(from 0deg, rgba(37, 99, 235, .06), transparent 25%, rgba(16, 185, 129, .08) 50%, transparent 75%, rgba(37, 99, 235, .06));
+      animation: rotate-background 40s linear infinite;
+    }
+
+    @keyframes move-background {
+      from { background-position: 0% 0%, 100% 0%, 100% 100%, 0 0; }
+      to { background-position: 100% 100%, 0% 100%, 0% 0%, 0 0; }
+    }
+
+    @keyframes rotate-background {
+      to { transform: rotate(1turn); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #background,
+      #background::before {
+        animation: none;
+      }
+    }
+
+    #map { width: 100%; height: 88vh; }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+    }
 
     a {
       color: #0b57d0;
@@ -93,6 +139,7 @@
   </style>
 </head>
 <body>
+  <div id="background" aria-hidden="true"></div>
   <div id="map" role="region" aria-label="Karte von Leipzig"></div>
 
   <section id="controls" aria-label="Kartensteuerung">
@@ -105,12 +152,17 @@
     <p>Dies ist ein privates Hobby-Projekt. Die Karte ist ein Beispiel und enthält keine kommerziellen Angebote.</p>
     <p id="message" role="status" aria-live="polite"></p>
     <p>Suchbegriffe werden zur Suche an OpenStreetMap Nominatim gesendet. Es werden keine Cookies gesetzt.</p>
+  </section>
+
+  <main>
+    <h1>CivixX – Bildungseinrichtungen in Leipzig</h1>
+    <p>Dies ist ein privates Hobby-Projekt. Die Karte zeigt Leipzig und ermöglicht eine Adresssuche sowie die Anzeige des eigenen Standorts.</p>
     <nav aria-label="Rechtliches und Hinweise">
       <a href="privacy.html">Datenschutz</a> ·
       <a href="cookies.html">Cookies</a> ·
       <a href="terms.html">Nutzungsbedingungen</a>
     </nav>
-  </section>
+  </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script>
