@@ -8,29 +8,36 @@
   <style>
     html, body { margin: 0; height: 100%; }
     #map { width: 100%; height: 100vh; }
-    #search {
+    #controls {
       position: absolute;
       top: 10px;
       left: 10px;
       z-index: 1000;
       display: flex;
+      flex-direction: column;
       gap: 6px;
       padding: 8px;
       background: white;
       border-radius: 4px;
       box-shadow: 0 1px 5px rgba(0,0,0,.4);
     }
+    #search { display: flex; gap: 6px; }
     #search input { width: 220px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-    #search button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer; }
-    #search button:hover { background: #e5e5e5; }
+    #search button, #location-button { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; cursor: pointer; }
+    #search button:hover, #location-button:hover { background: #e5e5e5; }
+    #message { display: none; padding: 6px; border-radius: 4px; background: #fde8e8; color: #b00020; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <form id="search">
-    <input type="text" placeholder="Adresse suchen" required>
-    <button type="submit">Suchen</button>
-  </form>
+  <div id="controls">
+    <form id="search">
+      <input type="text" placeholder="Adresse suchen" required>
+      <button type="submit">Suchen</button>
+    </form>
+    <button type="button" id="location-button">Mein Standort</button>
+    <div id="message"></div>
+  </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script>
     const maxBounds = [[51.12, 12.00], [51.56, 12.75]];
@@ -42,8 +49,22 @@
     }).addTo(map);
 
     let marker = null;
+    const message = document.getElementById('message');
     const form = document.getElementById('search');
     const input = form.querySelector('input');
+    const locationButton = document.getElementById('location-button');
+
+    function showMessage(text) {
+      message.textContent = text;
+      message.style.display = 'block';
+      setTimeout(() => { message.style.display = 'none'; }, 4000);
+    }
+
+    function setMarker(lat, lon, text) {
+      if (marker) marker.remove();
+      marker = L.marker([lat, lon]).addTo(map).bindPopup(text);
+      return marker;
+    }
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -59,14 +80,39 @@
 
       const response = await fetch(url);
       const results = await response.json();
-      if (!results.length) return;
+      if (!results.length) {
+        showMessage('Keine Adresse gefunden.');
+        return;
+      }
 
       const result = results[0];
       const lat = parseFloat(result.lat);
       const lon = parseFloat(result.lon);
       map.setView([lat, lon], 15);
-      if (marker) marker.remove();
-      marker = L.marker([lat, lon]).addTo(map).bindPopup(result.display_name);
+      setMarker(lat, lon, result.display_name);
+    });
+
+    locationButton.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        showMessage('Geolokalisierung wird nicht unterstützt.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(position => {
+        const { latitude: lat, longitude: lon } = position.coords;
+        if (!map.getBounds().contains([lat, lon])) {
+          showMessage('Der Standort liegt außerhalb des Kartenbereichs.');
+          return;
+        }
+        map.setView([lat, lon], 15);
+        setMarker(lat, lon, 'Mein Standort');
+      }, () => {
+        showMessage('Standort konnte nicht ermittelt werden.');
+      });
+    });
+
+    map.on('click', event => {
+      const { lat, lng } = event.latlng;
+      setMarker(lat, lng, `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     });
   </script>
 </body>
