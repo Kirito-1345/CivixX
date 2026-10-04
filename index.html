@@ -136,6 +136,57 @@
     }
 
     #message:empty { display: none; }
+
+    #login-menu {
+      display: none;
+      margin-top: 6px;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    #saved-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .saved-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #f3f4f6;
+    }
+
+    .saved-item button {
+      padding: 4px 8px;
+    }
+
+    .dialog {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(15, 23, 42, .35);
+      z-index: 1100;
+    }
+
+    .dialog[open] {
+      display: grid;
+    }
+
+    .dialog-box {
+      max-width: 520px;
+      width: min(520px, calc(100vw - 24px));
+      padding: 20px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
+    }
   </style>
 </head>
 <body>
@@ -149,6 +200,15 @@
       <button id="search-button" type="submit">Adresse suchen</button>
     </form>
     <button id="location-button" type="button">Standort auf der Karte zeigen</button>
+    <button id="account-button" type="button" aria-expanded="false" aria-controls="login-menu">Konto</button>
+    <div id="login-menu">
+      <p>Mit Google verbinden, um gemerkte Orte zu synchronisieren.</p>
+      <button id="google-login-button" type="button" disabled>Mit Google verbinden</button>
+      <p>Diese Funktion erfordert eine Google-OAuth-Konfiguration und einen Sync-Server. Sie ist im aktuellen Hobby-Projekt noch nicht aktiv.</p>
+      <hr>
+      <p><strong>Gemerkte Orte</strong></p>
+      <div id="saved-list" aria-label="Gemerkte Orte"></div>
+    </div>
     <p>Dies ist ein privates Hobby-Projekt. Die Karte ist ein Beispiel und enthält keine kommerziellen Angebote.</p>
     <p id="message" role="status" aria-live="polite"></p>
     <p>Suchbegriffe werden zur Suche an OpenStreetMap Nominatim gesendet. Es werden keine Cookies gesetzt.</p>
@@ -190,6 +250,54 @@
 
     let searchAbortController = null;
     let messageTimer = null;
+
+    const accountButton = document.getElementById('account-button');
+    const loginMenu = document.getElementById('login-menu');
+    const savedList = document.getElementById('saved-list');
+    const savedPlaces = JSON.parse(localStorage.getItem('savedPlaces') || '[]');
+
+    function savePlacesToStorage() {
+      localStorage.setItem('savedPlaces', JSON.stringify(savedPlaces));
+      renderSavedPlaces();
+    }
+
+    function renderSavedPlaces() {
+      savedList.innerHTML = '';
+
+      if (!savedPlaces.length) {
+        const p = document.createElement('p');
+        p.textContent = 'Noch keine Orte gemerkt.';
+        savedList.append(p);
+        return;
+      }
+
+      savedPlaces.forEach((place, index) => {
+        const div = document.createElement('div');
+        div.className = 'saved-item';
+
+        const label = document.createElement('span');
+        label.textContent = place.label;
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.textContent = 'Entfernen';
+        removeButton.addEventListener('click', () => {
+          savedPlaces.splice(index, 1);
+          savePlacesToStorage();
+        });
+
+        div.append(label, removeButton);
+        savedList.append(div);
+      });
+    }
+
+    accountButton.addEventListener('click', () => {
+      const expanded = accountButton.getAttribute('aria-expanded') === 'true';
+      accountButton.setAttribute('aria-expanded', String(!expanded));
+      loginMenu.style.display = expanded ? 'none' : 'block';
+    });
+
+    renderSavedPlaces();
 
     function showMessage(text) {
       clearTimeout(messageTimer);
@@ -280,7 +388,10 @@
 
     map.on('click', event => {
       const { lat, lng } = event.latlng;
-      setMarker(lat, lng, `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setMarker(lat, lng, label);
+      savedPlaces.push({ label, lat, lng });
+      savePlacesToStorage();
     });
   </script>
 </body>
