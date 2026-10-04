@@ -6,12 +6,22 @@
   <title>CivixX – Bildungseinrichtungen in Leipzig</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <style>
+    :root {
+      color-scheme: light;
+      --ink: #142b35;
+      --muted: #61757b;
+      --teal: #087e78;
+      --line: #dce8e6;
+      --paper: #fff;
+      --shadow: 0 18px 55px rgba(22, 54, 58, .15);
+    }
+
     html, body {
       margin: 0;
       min-height: 100%;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #111827;
-      background: #eef4ff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #f3f8f6;
     }
 
     #background {
@@ -20,42 +30,22 @@
       z-index: -1;
       overflow: hidden;
       background:
-        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, .28), transparent 28%),
-        radial-gradient(circle at 85% 25%, rgba(16, 185, 129, .22), transparent 30%),
-        radial-gradient(circle at 70% 85%, rgba(139, 92, 246, .24), transparent 32%),
-        linear-gradient(135deg, #eff6ff, #f5f3ff 45%, #ecfdf5);
-      background-size: 180% 180%, 180% 180%, 180% 180%, 100% 100%;
-      animation: move-background 18s ease-in-out infinite alternate;
+        radial-gradient(ellipse at 10% 10%, rgba(61, 166, 151, .12), transparent 42%),
+        radial-gradient(ellipse at 90% 85%, rgba(213, 171, 105, .12), transparent 40%),
+        linear-gradient(145deg, #f5faf8, #edf5f2 55%, #f9f7f1);
+      background-size: 100% 100%;
     }
 
     #background::before {
       content: "";
       position: absolute;
       inset: -20%;
-      background:
-        conic-gradient(from 0deg, rgba(37, 99, 235, .06), transparent 25%, rgba(16, 185, 129, .08) 50%, transparent 75%, rgba(37, 99, 235, .06));
-      animation: rotate-background 40s linear infinite;
-    }
-
-    @keyframes move-background {
-      from { background-position: 0% 0%, 100% 0%, 100% 100%, 0 0; }
-      to { background-position: 100% 100%, 0% 100%, 0% 0%, 0 0; }
-    }
-
-    @keyframes rotate-background {
-      to { transform: rotate(1turn); }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #background,
-      #background::before {
-        animation: none;
-      }
+      background: radial-gradient(ellipse at center, transparent 40%, rgba(255,255,255,.16));
     }
 
     #map {
       width: 100%;
-      height: clamp(480px, 88vh, 900px);
+      height: clamp(520px, 82vh, 920px);
       background: #e2e8f0;
     }
 
@@ -71,17 +61,17 @@
     }
 
     main {
-      max-width: 1000px;
+      max-width: 1180px;
       margin: 0 auto;
-      padding: 32px 16px 48px;
+      padding: 30px 24px 42px;
     }
 
     a {
-      color: #0b57d0;
+      color: var(--teal);
     }
 
     #controls nav a:visited {
-      color: #5b21b6;
+      color: #536c69;
     }
 
     .sr-only {
@@ -98,54 +88,73 @@
 
     #controls {
       position: absolute;
-      top: 12px;
-      left: 12px;
+      top: 24px;
+      left: 24px;
       z-index: 1000;
-      width: min(340px, calc(100vw - 24px));
-      padding: 10px;
-      background: rgba(255, 255, 255, .92);
-      border: 1px solid rgba(15, 23, 42, .12);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+      width: min(370px, calc(100vw - 48px));
+      padding: 22px;
+      background: rgba(255, 255, 255, .96);
+      border: 1px solid rgba(255, 255, 255, .85);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
       box-sizing: border-box;
     }
 
-    #search { display: flex; gap: 6px; }
+    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 20px; }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: linear-gradient(145deg, #0d9186, #086d68); }
+    .brand-mark svg { width: 21px; height: 21px; }
+    .brand-name { font-weight: 800; font-size: 17px; letter-spacing: -.04em; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .eyebrow { margin: 0 0 7px; color: var(--teal); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    #controls h2 { margin: 0; font-size: 23px; line-height: 1.16; letter-spacing: -.045em; }
+    .intro { margin: 8px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+    #search { display: flex; gap: 7px; }
 
     #search input:focus,
     button:focus-visible {
-      outline: 3px solid #2563eb;
+      outline: 3px solid #69c4b8;
       outline-offset: 2px;
     }
 
     #search input {
       flex: 1;
       min-width: 0;
-      padding: 8px;
-      border: 1px solid #767676;
-      border-radius: 6px;
+      padding: 11px 12px;
+      border: 1px solid #cbdad7;
+      border-radius: 10px;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      background: #fbfdfc;
     }
 
     button {
-      padding: 8px 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      background: #f3f4f6;
-      color: #111827;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f6faf8;
+      color: var(--ink);
       font: inherit;
+      font-size: 13px;
+      font-weight: 650;
       cursor: pointer;
+      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
     }
 
-    button:hover:not(:disabled) { background: #e5e7eb; }
+    button:hover:not(:disabled) { background: #eaf4f1; transform: translateY(-1px); }
     button:disabled { cursor: not-allowed; opacity: .65; }
+    #search-button { border-color: var(--teal); color: #fff; background: var(--teal); white-space: nowrap; }
+    #search-button:hover:not(:disabled) { background: #066c67; }
 
-    #location-button { width: 100%; margin-top: 6px; }
+    #location-button { width: 100%; margin-top: 8px; text-align: left; }
 
     #message {
       display: none;
       margin-top: 8px;
-      padding: 8px;
-      border-radius: 6px;
+      padding: 10px;
+      border-radius: 10px;
       background: #fee2e2;
       color: #8a1818;
     }
@@ -155,15 +164,16 @@
     #login-menu {
       display: none;
       margin-top: 6px;
-      padding: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
       background: #fff;
+      font-size: 13px;
     }
 
     #saved-list {
       display: grid;
-      gap: 6px;
+      gap: 7px;
     }
 
     .saved-item {
@@ -171,10 +181,11 @@
       justify-content: space-between;
       align-items: center;
       gap: 8px;
-      padding: 6px 8px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      background: #f3f4f6;
+      padding: 8px 9px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f7faf9;
+      font-size: 12px;
     }
 
     .saved-item button {
@@ -198,9 +209,28 @@
       max-width: 520px;
       width: min(520px, calc(100vw - 24px));
       padding: 20px;
-      border-radius: 8px;
+      border-radius: 18px;
       background: #fff;
       box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
+    }
+
+    .privacy-note { margin: 15px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    main h1 { margin: 0 0 8px; font-size: clamp(23px, 3vw, 34px); letter-spacing: -.045em; }
+    main > p { max-width: 680px; color: var(--muted); line-height: 1.65; }
+    main nav { margin-top: 22px; font-size: 13px; }
+
+    @media (max-width: 640px) {
+      #map { height: 72svh; min-height: 590px; }
+      #controls { top: 12px; left: 12px; width: min(370px, calc(100vw - 24px)); padding: 17px; border-radius: 16px; }
+      .brand { margin-bottom: 15px; }
+      #controls h2 { font-size: 21px; }
+      #search { flex-direction: column; }
+      #search-button { min-height: 42px; }
+      #location-button { min-height: 42px; }
+      main { padding: 26px 18px 36px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
@@ -209,12 +239,19 @@
   <div id="map" class="loading" role="region" aria-label="Karte von Leipzig" aria-busy="true"></div>
 
   <section id="controls" aria-label="Kartensteuerung">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/><path d="M9 9h6M12 6v6"/></svg></span>
+      <span><span class="brand-name">CivixX</span><span class="brand-caption">Leipzig entdecken</span></span>
+    </div>
+    <p class="eyebrow">Bildung vor Ort</p>
+    <h2>Finde deinen Weg.</h2>
+    <p class="intro">Suche eine Adresse oder erkunde die Karte. Ein Klick setzt einen eigenen Merkpunkt.</p>
     <form id="search" role="search">
       <label class="sr-only" for="address">Adresse suchen</label>
       <input id="address" name="address" type="search" placeholder="Adresse in Leipzig suchen" autocomplete="street-address" required>
       <button id="search-button" type="submit">Adresse suchen</button>
     </form>
-    <button id="location-button" type="button">Standort auf der Karte zeigen</button>
+    <button id="location-button" type="button">◎ &nbsp; Meinen Standort zeigen</button>
     <button id="account-button" type="button" aria-expanded="false" aria-controls="login-menu">Konto</button>
     <div id="login-menu">
       <p>Mit Google verbinden, um gemerkte Orte zu synchronisieren.</p>
@@ -224,14 +261,13 @@
       <p><strong>Gemerkte Orte</strong></p>
       <div id="saved-list" aria-label="Gemerkte Orte"></div>
     </div>
-    <p>Dies ist ein privates Hobby-Projekt. Die Karte ist ein Beispiel und enthält keine kommerziellen Angebote.</p>
+    <p class="privacy-note">Privates Hobby-Projekt · keine kommerziellen Angebote</p>
     <p id="message" role="status" aria-live="polite"></p>
-    <p>Suchbegriffe werden zur Suche an OpenStreetMap Nominatim gesendet. Es werden keine Cookies gesetzt.</p>
+    <p class="privacy-note">Suchbegriffe werden an OpenStreetMap Nominatim gesendet. Es werden keine Cookies gesetzt.</p>
   </section>
-
   <main>
-    <h1>CivixX – Bildungseinrichtungen in Leipzig</h1>
-    <p>Dies ist ein privates Hobby-Projekt. Die Karte zeigt Leipzig und ermöglicht eine Adresssuche sowie die Anzeige des eigenen Standorts.</p>
+    <h1>Leipzig auf einen Blick</h1>
+    <p>Erkunde die Stadt und markiere Orte, die du dir merken möchtest. Adresssuche und Standortanzeige helfen dir bei der Orientierung.</p>
     <nav aria-label="Rechtliches und Hinweise">
       <a href="privacy.html">Datenschutz</a> ·
       <a href="cookies.html">Cookies</a> ·
