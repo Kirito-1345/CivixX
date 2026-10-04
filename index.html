@@ -53,7 +53,22 @@
       }
     }
 
-    #map { width: 100%; height: 88vh; }
+    #map {
+      width: 100%;
+      height: clamp(480px, 88vh, 900px);
+      background: #e2e8f0;
+    }
+
+    #map.loading::after {
+      content: "Karte wird geladen…";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font: inherit;
+      color: #334155;
+      background: rgba(226, 232, 240, .8);
+    }
 
     main {
       max-width: 1000px;
@@ -191,7 +206,7 @@
 </head>
 <body>
   <div id="background" aria-hidden="true"></div>
-  <div id="map" role="region" aria-label="Karte von Leipzig"></div>
+  <div id="map" class="loading" role="region" aria-label="Karte von Leipzig" aria-busy="true"></div>
 
   <section id="controls" aria-label="Kartensteuerung">
     <form id="search" role="search">
@@ -224,7 +239,7 @@
     </nav>
   </main>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
   <script>
     'use strict';
 
@@ -241,15 +256,47 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
     }).addTo(map);
 
+    map.whenReady(() => {
+      mapElement.classList.remove('loading');
+      mapElement.setAttribute('aria-busy', 'false');
+    });
+
     const message = document.getElementById('message');
     const form = document.getElementById('search');
     const addressInput = document.getElementById('address');
+    const mapElement = document.getElementById('map');
     const searchButton = document.getElementById('search-button');
     const locationButton = document.getElementById('location-button');
     const markers = L.layerGroup().addTo(map);
 
     let searchAbortController = null;
     let messageTimer = null;
+
+    const geocodeCache = new Map();
+    const geocodeCacheKey = 'geocodeCache';
+    const geocodeCacheTtl = 24 * 60 * 60 * 1000;
+
+    function readGeocodeCache() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(geocodeCacheKey) || '{}');
+        return Object.entries(cached).filter(([, value]) => Date.now() < value.expires);
+      } catch {
+        return [];
+    }
+    }
+
+    function getGeocodeCache(key) {
+      const cached = geocodeCache.get(key);
+      return cached && cached.expires > Date.now() ? cached.result : null;
+    }
+
+    function setGeocodeCache(key, result) {
+      geocodeCache.set(key, { result, expires: Date.now() + geocodeCacheTtl });
+      const stored = Object.fromEntries(geocodeCache);
+      localStorage.setItem(geocodeCacheKey, JSON.stringify(stored));
+    }
+
+    readGeocodeCache().forEach(([key, value]) => geocodeCache.set(key, value));
 
     const accountButton = document.getElementById('account-button');
     const loginMenu = document.getElementById('login-menu');
@@ -323,10 +370,16 @@
       url.searchParams.set('viewbox', `${maxBounds.getWest()},${maxBounds.getNorth()},${maxBounds.getEast()},${maxBounds.getSouth()}`);
       url.searchParams.set('bounded', '1');
 
+      const cacheKey = url.searchParams.toString();
+      const cached = getGeocodeCache(cacheKey);
+      if (cached) return cached;
+
       const response = await fetch(url, { signal: searchAbortController.signal });
       if (!response.ok) throw new Error('network');
       const results = await response.json();
-      return results.length ? results[0] : null;
+      const result = results.length ? results[0] : null;
+      if (result) setGeocodeCache(cacheKey, result);
+      return result;
     }
 
     async function searchAddress(query) {
@@ -357,10 +410,23 @@
       }
     }
 
+    let debounceTimer = null;
+
+    function debouncedSearch(query) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => searchAddress(query), 350);
+    }
+
     form.addEventListener('submit', async event => {
       event.preventDefault();
+      clearTimeout(debounceTimer);
       const query = addressInput.value.trim();
       if (query) await searchAddress(query);
+    });
+
+    addressInput.addEventListener('input', () => {
+      const query = addressInput.value.trim();
+      if (query.length >= 3) debouncedSearch(query);
     });
 
     locationButton.addEventListener('click', () => {

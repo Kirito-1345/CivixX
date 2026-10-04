@@ -43,3 +43,18 @@ CivixX entwickelt eine interaktive Karte, die Bildungseinrichtungen in und um Le
 - cdnjs.cloudflare.com für Leaflet
 
 Diese Dienste werden ohne API-Key genutzt. Der öffentliche Nominatim- und OSRM-Demo-Server ist für kleine Hobby-Projekte geeignet, bietet aber keine Verfügbarkeitsgarantie und ist nicht für produktive Anwendungen empfohlen.
+
+## Performance
+
+- API-Antworten der Adresssuche werden 24 Stunden lokal zwischengespeichert
+- Sucheingaben werden entprellt, um unnötige API-Anfragen zu vermeiden
+- Karte zeigt einen Ladeindikator und wird erst nach Initialisierung als bereit markiert
+- Leaflet wird mit `defer` geladen, um das initiale Rendering nicht zu blockieren
+- Höhen der Karte sind auf große und kleine Displays begrenzt
+- Kein Bundling, keine ungenutzten Abhängigkeiten, keine Bilder oder Komprimierung nötig
+- Keine Datenbank vorhanden, daher sind Query-Caching, Pagination und Connection-Pooling nicht anwendbar
+- Minifizierung kann bei Bedarf über einen statischen Hosting-Dienst aktiviert werden
+
+## Nicht anwendbar
+
+Dies ist aktuell eine statische HTML-Seite ohne Backend, Datenbank, API-Server oder große Listen. Deshalb gibt es hier keine serverseitige Lastverteilung, Datenbankindizes, teuren Queries, N+1-Probleme, Verbindungspools oder API-Payloads, die vom Projekt selbst komprimiert werden müssten.
