@@ -24,7 +24,21 @@ CivixX ist eine interaktive Karte für Bildungseinrichtungen in und um Leipzig. 
 
 ## Technologie
 
-Die Seite nutzt Leaflet für die Kartendarstellung und OpenStreetMap für Kartendaten und Adresssuche. Suchergebnisse werden vorübergehend zwischengespeichert, um wiederholte Anfragen zu vermeiden.
+Die React-Version liegt in `dist-react/` und nutzt React, Vite, React Leaflet, Leaflet sowie OpenStreetMap/Nominatim. Suchergebnisse werden vorübergehend zwischengespeichert, um wiederholte Anfragen zu vermeiden.
+
+```bash
+cd dist-react
+npm install
+npm run dev
+```
+
+Für den Produktions-Build:
+
+```bash
+cd dist-react
+npm run build
+npm run preview
+```
 
 ## Entwicklung
 
