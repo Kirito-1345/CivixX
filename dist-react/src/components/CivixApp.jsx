@@ -184,9 +184,11 @@ export default function CivixApp() {
 
       <main>
         <section className="hero" id="karte">
-          <div className="hero-copy">
-            <p className="eyebrow">Bildung vor Ort</p>
-            <h1>Finde Bildungseinrichtungen in Leipzig.</h1>
+          <div className="hero-top">
+            <div>
+              <p className="eyebrow">Bildung vor Ort</p>
+              <h1>Finde Bildungseinrichtungen in Leipzig.</h1>
+            </div>
             <p className="lead">Suche eine Adresse, nutze deinen Standort oder klicke direkt in die Karte. Deine gemerkten Orte bleiben lokal in deinem Browser gespeichert.</p>
             <div className="quick-stats" aria-label="Projektübersicht">
               <span>Interaktive Karte</span>
@@ -214,32 +216,32 @@ export default function CivixApp() {
               ))}
             </MapContainer>
 
-            <div className="control-panel">
-              <p className="panel-title">Kartensteuerung</p>
+            <div className="map-controls">
               <form onSubmit={handleSubmit} role="search">
                 <label className="sr-only" htmlFor="address">Adresse suchen</label>
                 <input id="address" value={query} onChange={event => setQuery(event.target.value)} placeholder="Adresse in Leipzig suchen" autoComplete="street-address" />
                 <button type="submit" disabled={busy || !query.trim()}>{busy ? "Suche…" : "Suchen"}</button>
+                <button className="secondary" type="button" onClick={showLocation}>Standort</button>
+                <button className="secondary" type="button" aria-expanded={savedOpen} aria-controls="saved-panel" onClick={() => setSavedOpen(!savedOpen)}>
+                  Gemerkt ({savedPlaces.length})
+                </button>
               </form>
-              <button className="secondary" type="button" onClick={showLocation}>◎ Meinen Standort zeigen</button>
-              <button className="secondary" type="button" aria-expanded={savedOpen} aria-controls="saved-panel" onClick={() => setSavedOpen(!savedOpen)}>
-                Gemerkte Orte ({savedPlaces.length})
-              </button>
-              {savedOpen && (
-                <div className="saved-panel" id="saved-panel">
-                  {savedPlaces.length ? savedPlaces.map((place, index) => (
-                    <div className="saved-item" key={`${place.index}-${place.label}`}>
-                      <button type="button" onClick={() => {
-                        setSearch({ position: [place.lat, place.lng], zoom: 16 })
-                        setActiveMarker({ position: [place.lat, place.lng], title: place.label })
-                      }}>{place.label}</button>
-                      <button className="remove" type="button" onClick={() => removeSaved(index)}>✕</button>
-                    </div>
-                  )) : <p>Noch keine Orte gemerkt.</p>}
-                </div>
-              )}
               <p className={status ? "status active" : "status"} role="status" aria-live="polite">{status}</p>
             </div>
+
+            {savedOpen && (
+              <div className="saved-panel" id="saved-panel">
+                {savedPlaces.length ? savedPlaces.map((place, index) => (
+                  <div className="saved-item" key={`${place.index}-${place.label}`}>
+                    <button type="button" onClick={() => {
+                      setSearch({ position: [place.lat, place.lng], zoom: 16 })
+                      setActiveMarker({ position: [place.lat, place.lng], title: place.label })
+                    }}>{place.label}</button>
+                    <button className="remove" type="button" onClick={() => removeSaved(index)}>✕</button>
+                  </div>
+                )) : <p>Noch keine Orte gemerkt.</p>}
+              </div>
+            )}
             {!mapReady && <div className="map-loading">Karte wird geladen…</div>}
           </div>
         </section>

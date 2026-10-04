@@ -74,16 +74,15 @@ body {
 main { flex: 1; max-width: 1280px; margin: 0 auto; padding: clamp(24px, 4vw, 50px) clamp(18px, 5vw, 48px) 40px; width: 100%; }
 
 .hero {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  align-items: start;
-  gap: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
 }
 
-.hero-copy { padding-top: 18px; }
+.hero-top > div:first-child { max-width: 900px; }
 .eyebrow { margin: 0 0 8px; color: var(--teal); font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
-.hero-copy h1 { margin: 0 0 14px; font-size: clamp(34px, 4.2vw, 54px); line-height: 1.05; letter-spacing: -0.05em; }
-.lead { margin: 0 0 22px; color: var(--muted); font-size: 16px; line-height: 1.7; max-width: 520px; }
+.hero-top h1 { margin: 0; font-size: clamp(30px, 3.7vw, 48px); line-height: 1.06; letter-spacing: -0.05em; }
+.lead { margin: 14px 0 18px; color: var(--muted); font-size: clamp(14px, 1.5vw, 16px); line-height: 1.7; max-width: 780px; }
 
 .quick-stats { display: flex; flex-wrap: wrap; gap: 8px; }
 .quick-stats span {
@@ -107,21 +106,55 @@ main { flex: 1; max-width: 1280px; margin: 0 auto; padding: clamp(24px, 4vw, 50p
 
 .map { width: 100%; height: clamp(540px, 74vh, 820px); z-index: 1; }
 
-.control-panel {
+.map-controls {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 16px;
+  left: 16px;
+  right: 16px;
   z-index: 500;
-  width: min(340px, calc(100% - 40px));
-  padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
-  box-shadow: 0 18px 42px rgba(15, 42, 48, 0.16);
+  box-shadow: 0 14px 34px rgba(15, 42, 48, 0.14);
 }
 
-.panel-title { margin: 0 0 14px; color: var(--teal); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.map-controls form {
+  flex: 1 1 380px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.map-controls input { flex: 1 1 240px; }
+.map-controls form > button { flex: 0 0 auto; }
+.secondary { width: auto; margin: 0; }
+.status { margin: 0; color: var(--muted); font-size: 12px; min-height: 18px; }
+.status.active { color: #8a1818; }
+
+.saved-panel {
+  position: absolute;
+  top: 74px;
+  left: 16px;
+  z-index: 500;
+  width: min(400px, calc(100% - 32px));
+  max-height: min(360px, 45vh);
+  overflow: auto;
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 38px rgba(15, 42, 48, 0.16);
+}
+
 form { display: flex; gap: 7px; }
 
 input {
@@ -156,10 +189,10 @@ form button { border-color: var(--teal); color: white; background: var(--teal); 
 form button:hover:not(:disabled) { background: var(--teal-dark); }
 .secondary { width: 100%; margin-top: 8px; text-align: left; }
 
-.status { margin: 12px 0 0; color: var(--muted); font-size: 12px; min-height: 18px; }
+.status { margin: 0; color: var(--muted); font-size: 12px; min-height: 18px; }
 .status.active { color: #8a1818; }
 
-.saved-panel { margin-top: 10px; display: grid; gap: 7px; }
+.saved-panel { display: grid; gap: 7px; }
 .saved-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 9px; background: #f7faf9; font-size: 12px; }
 .saved-item button { padding: 5px 7px; border: 0; background: transparent; }
 .saved-item button:hover { background: #eaf4f1; }
@@ -207,18 +240,17 @@ form button:hover:not(:disabled) { background: var(--teal-dark); }
 .civix-pin-user span { background: #d5ab69; }
 
 @media (max-width: 960px) {
-  .hero { grid-template-columns: 1fr; }
-  .hero-copy { padding-top: 0; }
-  .map { height: min(70svh, 680px); }
+    .map { height: min(70svh, 680px); }
   .cards { grid-template-columns: 1fr; }
   .site-header, .site-footer { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 
 @media (max-width: 520px) {
   .map { height: min(72svh, 620px); }
-  .control-panel { top: 12px; left: 12px; width: min(330px, calc(100% - 24px)); padding: 15px; }
-  form { flex-direction: column; }
-  form button { min-height: 42px; }
+  .map-controls { top: 10px; left: 10px; right: 10px; padding: 8px; }
+  .map-controls form { flex-direction: column; }
+  .map-controls form > button, .map-controls .secondary { width: 100%; min-height: 42px; }
+  .saved-panel { top: 124px; left: 10px; width: calc(100% - 20px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
