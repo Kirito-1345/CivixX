@@ -248,9 +248,10 @@ export default function CivixApp() {
               ))}
               {routeLine && <Polyline positions={routeLine} pathOptions={{ color: "#087e78", weight: 5, opacity: 0.85 }} />}
             </MapContainer>
+          </div>
 
-            <div className="map-controls">
-              <form onSubmit={handleSubmit} role="search">
+          <div className="map-controls">
+            <form onSubmit={handleSubmit} role="search">
                 <label className="sr-only" htmlFor="address">Adresse suchen</label>
                 <input id="address" value={query} onChange={event => setQuery(event.target.value)} placeholder="Adresse in Leipzig suchen" autoComplete="street-address" />
                 <button type="submit" disabled={busy || !query.trim()}>{busy ? "Suche…" : "Suchen"}</button>
@@ -258,32 +259,30 @@ export default function CivixApp() {
                 <button className="secondary" type="button" aria-expanded={savedOpen} aria-controls="saved-panel" onClick={() => setSavedOpen(!savedOpen)}>
                   Gemerkt ({savedPlaces.length})
                 </button>
-              </form>
-              <form className="route-form" onSubmit={generateRoute}>
+            </form>
+            <form className="route-form" onSubmit={generateRoute}>
                 <label className="sr-only" htmlFor="route-start">Startpunkt</label>
                 <input id="route-start" value={routeStart} onChange={event => setRouteStart(event.target.value)} placeholder="Start" />
                 <label className="sr-only" htmlFor="route-end">Zielpunkt</label>
                 <input id="route-end" value={routeEnd} onChange={event => setRouteEnd(event.target.value)} placeholder="Ziel" />
                 <button type="submit" disabled={routeBusy}>{routeBusy ? "Route…" : "Route erstellen"}</button>
-              </form>
-              <p className={status ? "status active" : "status"} role="status" aria-live="polite">{status}</p>
-            </div>
-
-            {savedOpen && (
-              <div className="saved-panel" id="saved-panel">
-                {savedPlaces.length ? savedPlaces.map((place, index) => (
-                  <div className="saved-item" key={`${place.index}-${place.label}`}>
-                    <button type="button" onClick={() => {
-                      setSearch({ position: [place.lat, place.lng], zoom: 16 })
-                      setActiveMarker({ position: [place.lat, place.lng], title: place.label })
-                    }}>{place.label}</button>
-                    <button className="remove" type="button" onClick={() => removeSaved(index)}>✕</button>
-                  </div>
-                )) : <p>Noch keine Orte gemerkt.</p>}
-              </div>
-            )}
-            {!mapReady && <div className="map-loading">Karte wird geladen…</div>}
+            </form>
+            <p className={status ? "status active" : "status"} role="status" aria-live="polite">{status}</p>
           </div>
+
+          {savedOpen && (
+            <div className="saved-panel" id="saved-panel">
+              {savedPlaces.length ? savedPlaces.map((place, index) => (
+                <div className="saved-item" key={`${place.index}-${place.label}`}>
+                  <button type="button" onClick={() => {
+                    setSearch({ position: [place.lat, place.lng], zoom: 16 })
+                    setActiveMarker({ position: [place.lat, place.lng], title: place.label })
+                  }}>{place.label}</button>
+                  <button className="remove" type="button" onClick={() => removeSaved(index)}>✕</button>
+                </div>
+              )) : <p>Noch keine Orte gemerkt.</p>}
+            </div>
+          )}
         </section>
 
         <section className="cards" id="hinweise">

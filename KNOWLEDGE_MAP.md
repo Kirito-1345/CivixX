@@ -2,93 +2,91 @@
 
 ## Zweck und Produkt
 
-CivixX ist eine interaktive Karte für Bildungseinrichtungen in Leipzig und Umgebung. Nutzende können eine Adresse suchen, ihren Standort anzeigen und Orte direkt auf der Karte merken. Die Merkliste wird lokal im Browser gespeichert.
+CivixX ist eine interaktive Karte für Bildungseinrichtungen in Leipzig und Umgebung. Nutzende können Adressen suchen, ihren Standort anzeigen lassen, Auto-Routen zwischen zwei Adressen berechnen und Orte durch einen Klick auf die Karte lokal merken. Eine Backend-Anbindung, Anmeldung oder Synchronisierung ist nicht aktiv.
 
 ## Systemübersicht
 
 ```mermaid
 flowchart LR
   User[Nutzende] --> Web[React Web-App]
-  Web --> Leaflet[Leaflet / React Leaflet]
-  Leaflet --> Tiles[OpenStreetMap Kartenkacheln]
-  Web -->|Adresssuche| Nominatim[OpenStreetMap Nominatim]
-  Web -->|Merkliste und Suchcache| LS[Browser Local Storage]
-  Web -->|Standort mit Zustimmung| Geo[Browser Geolocation API]
+  Web --> Leaflet[React Leaflet / Leaflet]
+  Leaflet --> Tiles[OpenStreetMap-Kartenkacheln]
+  Web -->|Adresssuche und Routenstopps| Nominatim[Öffentlicher Nominatim-Dienst]
+  Web -->|Auto-Routen| OSRM[Öffentlicher OSRM-Demo-Server]
+  Web -->|Merkliste und Geocoding-Cache| LS[Browser Local Storage]
+  Web -->|Standort nach Zustimmung| Geo[Browser Geolocation API]
 ```
-
-Es gibt aktuell keinen Backenddienst. Anmeldung und Synchronisierung sind nicht aktiviert.
 
 ## Einstiegspunkte und wichtige Dateien
 
 | Bereich | Datei | Zuständigkeit |
 | --- | --- | --- |
-| Projektbeschreibung | `README.md` | Funktionen, Seiten und lokale Entwicklungsanleitung |
-| React Einstieg | `dist-react/index.html`, `dist-react/src/main.jsx` | HTML-Shell, React-Mount, globale Styles und Leaflet-CSS |
-| App-Komposition | `dist-react/src/App.jsx` | Rendert die CivixX-Anwendung |
-| Hauptfunktionalität | `dist-react/src/components/CivixApp.jsx` | Karte, Suche, Geolocation, Marker und Merkliste |
+| Projektbeschreibung | `README.md` | Produktüberblick, Funktionen und Entwicklungsbefehle |
+| React-Einstieg | `dist-react/index.html`, `dist-react/src/main.jsx` | HTML-Shell, React-Mount, Leaflet-CSS und globale Styles |
+| App-Komposition und Routing | `dist-react/src/App.jsx` | BrowserRouter und Routen für Karte, Rechtstexte und 404 |
+| Hauptfunktionalität | `dist-react/src/components/CivixApp.jsx` | Kartenansicht, Suche, Routenberechnung, Geolocation, Marker und Merkliste |
 | Persistenz-Hook | `dist-react/src/hooks/useLocalStorage.js` | JSON lesen/schreiben und Fehler des lokalen Speichers abfangen |
-| Darstellung | `dist-react/src/index.css` | Globale und Komponenten-Styles |
+| Gemeinsames Seitenlayout | `dist-react/src/components/SiteLayout.jsx` | Header, Navigation, Footer und Rahmen für React-Seiten |
+| Rechtliche React-Seiten | `dist-react/src/pages/Privacy.jsx`, `dist-react/src/pages/Cookies.jsx`, `dist-react/src/pages/Terms.jsx` | Datenschutz, Cookie-Hinweise und Nutzungsbedingungen |
+| Darstellung | `dist-react/src/index.css` | Globale, Layout-, Karten- und Komponenten-Styles |
 | Build-Konfiguration | `dist-react/vite.config.js`, `dist-react/package.json` | Vite-Konfiguration, Skripte und Abhängigkeiten |
-| React-Seiten | `dist-react/src/pages/Privacy.jsx`, `dist-react/src/pages/Cookies.jsx`, `dist-react/src/pages/Terms.jsx` | Rechtliche React-Seiten mit einheitlichem Design |
-| React-Layout | `dist-react/src/components/SiteLayout.jsx` | Header, Navigation, Footer und Seitenrahmen für alle React-Routen |
-| React-Routing | `dist-react/src/App.jsx` | React-Routen für Karte, Datenschutz, Cookies, Nutzungsbedingungen und 404 |
-| Rechtliche Informationen | `privacy.html`, `cookies.html`, `terms.html` | Ältere eigenständige Rechtstexte; werden nicht mehr von der React-App genutzt |
-| Legacy/Standalone-App | `index.html` | Ältere eigenständige Leaflet-Implementierung mit Suche, Konto-Menü und Karte |
-
-`dist-react/public/` enthält Kopien der Rechtstexte und statische Assets für die React-Ausgabe.
+| Ältere Rechtstexte | `privacy.html`, `cookies.html`, `terms.html` | Eigenständige statische Fassungen außerhalb des React-Routings |
+| Statische React-Assets | `dist-react/public/` | Kopien der Rechtstexte und statische Assets für Vite |
+| Legacy/Standalone-App | `index.html` | Separate ältere Leaflet-Implementierung mit Konto-Menü und Kartenfunktionen |
 
 ## Hauptabläufe
 
 ### Adresssuche
 
-1. Das Formular in `CivixApp.jsx` nimmt die Eingabe an.
-2. Die App fragt den öffentlichen Nominatim-Endpunkt (`search`) ab und beschränkt die Suche auf Deutschland sowie das definierte Leipziger Kartenrechteck.
-3. Erfolgreiche Ergebnisse werden bis zu 24 Stunden im Local Storage unter `civixx.geocodeCache` zwischengespeichert.
-4. Die Karte fliegt zum Ergebnis; ein Suchmarker und eine Statusmeldung werden angezeigt.
+1. Das Suchformular in `CivixApp.jsx` übergibt die Eingabe an `submitSearch` und `geocode`.
+2. Die App ruft den öffentlichen Nominatim-Endpunkt `search` auf und begrenzt die Suche auf Deutschland sowie das Leipziger `BOUNDS`-Rechteck.
+3. Erfolgreiche Geocoding-Ergebnisse werden mit 24 Stunden Ablaufzeit im Browser unter `civixx.geocodeCache` gespeichert; beim Start werden nur noch gültige Cache-Einträge geladen.
+4. Die Karte prüft das Ergebnis gegen `BOUNDS`, fliegt mit `SearchFlyTo` zur Adresse und zeigt Marker sowie Statusmeldung. Laufende Geocoding-Anfragen können über `AbortController` abgebrochen werden.
 
 ### Merkliste und Kartenklick
 
-- Ein Klick auf die Karte erzeugt einen Marker und fügt Koordinaten und Label der Merkliste hinzu.
-- Der Hook `useLocalStorage` speichert die Liste unter `civixx.savedPlaces`.
-- Das Merkliste-Panel kann Orte erneut auf der Karte anzeigen oder entfernen.
-- Die Daten verlassen bei diesem Ablauf nicht den Browser.
+- Ein Klick auf die Karte setzt einen Marker und fügt Koordinaten und Koordinaten-Label der Merkliste hinzu.
+- `useLocalStorage` speichert die Merkliste unter `civixx.savedPlaces`.
+- Das Merkliste-Panel kann Orte erneut auf der Karte anzeigen oder entfernen; die gespeicherten Marker werden zusätzlich direkt auf der Karte gerendert.
+- Merkliste und Geocoding-Cache verlassen bei diesen Abläufen nicht den Browser.
 
 ### Routenberechnung
 
-- Nutzende können einen Startpunkt und einen Zielpunkt eingeben.
-- Beide Eingaben werden über Nominatim geokodiert und gegen `BOUNDS` geprüft.
-- Die Route wird über den öffentlichen OSRM-Demo-Server (`router.project-osrm.org`) abgerufen.
-- Das Ergebnis wird als Polyline auf der Karte gezeichnet.
-- Die Zoom-Animation wurde langsamer gestellt (`duration: 2.5`).
+1. Nutzende geben Start und Ziel ein; beide Adressen werden parallel über dieselbe Nominatim-Geocoding-Funktion aufgelöst.
+2. Beide Koordinaten müssen innerhalb von `BOUNDS` liegen.
+3. Die App fragt den öffentlichen OSRM-Demo-Server unter `router.project-osrm.org` mit dem Profil `driving` ab.
+4. Eine erfolgreiche GeoJSON-Geometrie wird in Leaflet-Koordinaten umgewandelt und als Polyline gezeichnet. Die Karte springt zum Startpunkt.
 
 ### Standort
 
-- Die App verwendet `navigator.geolocation` und fragt den Browser nach Berechtigung.
-- Der Standort wird nur angezeigt, wenn er innerhalb des definierten Leipzig-Bereichs liegt.
-- Standortdaten werden nicht in der Merkliste gespeichert, solange Nutzende den Ort nicht selbst merken.
+- `navigator.geolocation` fragt den Browser nach Berechtigung und verwendet hohe Genauigkeit, ein Timeout von zehn Sekunden und einen maximal 30 Sekunden alten Messwert.
+- Der Standort wird nur angezeigt, wenn er innerhalb des Leipziger Bereichs liegt.
+- Er wird nicht automatisch in der Merkliste gespeichert.
 
 ## Technische Bausteine
 
-- React 19, React DOM und Vite 8
+- React 19 und React DOM
+- React Router DOM 7 für clientseitiges Routing
+- Vite 8 mit React-Plugin
 - React Leaflet 5 und Leaflet 1.9
-- OpenStreetMap-Kacheln für die Kartendarstellung
-- OSRM-Demo-Server für Auto-Routen zwischen zwei eingegebenen Stops
-- Nominatim für Geocoding
-- Browser Local Storage für Merkliste und Suchcache
+- OpenStreetMap-Kacheln für die Karte
+- Nominatim für Adress-Geocoding
+- OSRM-Demo-Server für Auto-Routen
+- Browser Local Storage für Merkliste und Geocoding-Cache
 - Browser Geolocation API für die optionale Standortanzeige
 
 ## Geografischer Bereich
 
-Die Karte startet bei Leipzig (`51.3397, 12.3731`) und ist durch `BOUNDS` in `dist-react/src/components/CivixApp.jsx` räumlich begrenzt. Das Suchergebnis und der Standort werden zusätzlich gegen diese Grenzen geprüft. Änderungen an der unterstützten Region sollten daher Kartenbegrenzung und Ergebnisprüfung gemeinsam berücksichtigen.
+Die Karte startet bei Leipzig (`51.3397, 12.3731`) und wird durch `BOUNDS` in `dist-react/src/components/CivixApp.jsx` begrenzt. Geocoding-Ergebnisse und der Standort werden ebenfalls gegen diese Grenzen geprüft. Änderungen an der unterstützten Region sollten Kartenbegrenzung und Ergebnisprüfungen gemeinsam berücksichtigen.
 
 ## Datenschutz und externe Abhängigkeiten
 
-- Für die Karte werden Kacheln von `tile.openstreetmap.org` geladen.
-- Adressanfragen gehen an den öffentlichen Nominatim-Dienst.
+- Kartenkacheln werden von `tile.openstreetmap.org` geladen.
+- Adress- und Routenstopps gehen an den öffentlichen Nominatim-Dienst; Routing-Anfragen gehen an `router.project-osrm.org`.
 - Der Standortzugriff erfolgt über die Browser-API und erfordert Nutzerzustimmung.
-- Gemerkte Orte und Geocoding-Cache liegen im Local Storage.
-- Google OAuth und serverseitige Synchronisierung sind laut README und Datenschutztext vorbereitet, aber nicht implementiert.
-- Die Rechtstexte liegen sowohl im Projektstamm als auch unter `dist-react/public/`; bei Änderungen sollten beide Fassungen abgeglichen werden.
+- Merkliste und Geocoding-Cache liegen im Local Storage.
+- Die React-Karte verwendet keine Anmeldung und keine serverseitige Synchronisierung. Die Standalone-`index.html` enthält weiterhin einen älteren Konto-Bereich; die Google-Anmeldung und Synchronisierung sind laut README vorbereitet, aber nicht aktiv.
+- Rechtstexte liegen im Projektstamm und in `dist-react/public/`; React-Routen nutzen die Komponenten unter `dist-react/src/pages/`. Änderungen sollten die jeweiligen Fassungen abgleichen.
 
 ## Entwicklung
 
@@ -106,22 +104,25 @@ npm run build
 npm run preview
 ```
 
-Im Paket sind außerdem `npm run lint` (Oxlint) und die Vite-Skripte definiert. Das Root-README beschreibt zusätzlich, wie die statischen Root-Dateien über einen einfachen Python-Webserver geöffnet werden.
+Zusätzlich ist `npm run lint` (Oxlint) definiert. Es gibt im Paket derzeit kein Testskript.
 
 ## Bekannte Zustände und zu beachtende Punkte
 
-- Die React-App ist die im Root-README beschriebene Version. `index.html` im Projektstamm ist eine separate ältere Standalone-App; Änderungen an der React-App ändern diese Datei nicht automatisch.
-- Die React-Version bietet laut aktuellem Quellcode Karte, Suche, Standort, Merkliste und Hinweise. Ein Konto-/Google-Anmeldebereich ist dort nicht vorhanden; er kommt nur in der Standalone-`index.html` vor.
-- Nominatim-Aufrufe unterliegen den Nutzungsbedingungen und der Verfügbarkeit des öffentlichen Dienstes. Der Cache reduziert wiederholte Anfragen, ist aber kein Backend- oder Offline-Cache für Kartenkacheln.
-- `MapReady` setzt den Ladezustand der Karte; Suchnavigation wird über `SearchFlyTo` umgesetzt.
-- Es sind im Quellcode keine Testskripte definiert; Build- und Lint-Skripte sind vorhanden.
+- Die React-App unter `dist-react/` ist die im README beschriebene Version. Das Root-`index.html` ist eine separate ältere Standalone-App und wird vom React-Routing nicht gerendert.
+- Die React-Version bietet Karte, Suche, Standort, Merkliste, Routenberechnung und Hinweise. Konto-/Google-Anmeldung erscheint nur in der Standalone-`index.html`.
+- Nominatim und der OSRM-Demo-Server sind öffentliche Dienste. Verfügbarkeit und Nutzungsbedingungen liegen außerhalb der App; der lokale Cache betrifft nur Geocoding-Ergebnisse, nicht die Kartenkacheln oder Routen.
+- `MapReady` setzt den Karten-Ladezustand; `SearchFlyTo` übernimmt die animierte Navigation zu Such-, Standort- oder Merkliste-Zielen.
+- Die CSS-Kartensteuerung und Merkliste sind im aktuellen Stylesheet im Dokumentfluss angeordnet, nicht als Overlay über der Karte.
+- Vorhandene Änderungen an `CivixApp.jsx` und `index.css` verändern die Kartensteuerungen und das Merkliste-Panel. Die Knowledge Map beschreibt die aktuelle Struktur; diese Änderungen wurden bei der Aktualisierung nicht verändert.
 
 ## Orientierung für Änderungen
 
 - UI und Nutzerabläufe: `dist-react/src/components/CivixApp.jsx`
 - Kartenregion oder Startansicht: Konstanten `LEIPZIG` und `BOUNDS` in derselben Datei
 - Local Storage-Verhalten: `dist-react/src/hooks/useLocalStorage.js`
+- Routing und 404: `dist-react/src/App.jsx`
+- Gemeinsamer Seitenrahmen: `dist-react/src/components/SiteLayout.jsx`
+- Rechtstexte: `dist-react/src/pages/` sowie Root-Dateien und `dist-react/public/`
 - Globale Gestaltung: `dist-react/src/index.css`
-- Rechtstexte: Root-Dateien und entsprechende Dateien in `dist-react/public/`
 - Abhängigkeiten und Befehle: `dist-react/package.json`
 - Standalone-Version: `index.html` im Projektstamm
