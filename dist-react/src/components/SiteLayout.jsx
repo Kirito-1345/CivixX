@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Link, Outlet } from "react-router-dom"
 
 const LEGAL = [
@@ -7,6 +8,19 @@ const LEGAL = [
 ]
 
 export default function SiteLayout({ children }) {
+  const [cookieNotice, setCookieNotice] = useState(() => {
+    try {
+      return localStorage.getItem("civixx.cookieNotice") !== "accepted"
+    } catch {
+      return true
+    }
+  })
+
+  const acceptCookies = () => {
+    localStorage.setItem("civixx.cookieNotice", "accepted")
+    setCookieNotice(false)
+  }
+
   return (
     <div className="page">
       <header className="site-header">
@@ -25,6 +39,17 @@ export default function SiteLayout({ children }) {
         </nav>
       </header>
       {children || <Outlet />}
+      {cookieNotice && (
+        <div className="cookie-popup" role="dialog" aria-modal="false" aria-labelledby="cookie-title" aria-describedby="cookie-text">
+          <div>
+            <h2 id="cookie-title">Hinweis</h2>
+            <p id="cookie-text">Diese Website verwendet keine Cookies und kein Tracking. Deine Merkliste wird nur lokal gespeichert.</p>
+          </div>
+          <div className="cookie-actions">
+            <button type="button" onClick={acceptCookies}>Verstanden</button>
+          </div>
+        </div>
+      )}
       <footer className="site-footer">
         <p>CivixX · privates Hobby-Projekt · Kartendaten © OpenStreetMap-Mitwirkende</p>
         <nav aria-label="Rechtliches">

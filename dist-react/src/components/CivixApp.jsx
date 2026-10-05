@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet"
+import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import { useLocalStorage } from "../hooks/useLocalStorage.js"
 
@@ -30,7 +30,7 @@ function MapReady({ onReady }) {
 function SearchFlyTo({ target }) {
   const map = useMap()
   useEffect(() => {
-    if (target) map.flyTo(target.position, target.zoom || 15, { duration: 1.1 })
+    if (target) map.flyTo(target.position, target.zoom || 15, { duration: 2.5, easeLinearity: 0.35 })
   }, [map, target])
   return null
 }
@@ -42,6 +42,10 @@ function ClickCapture({ onClick }) {
 
 export default function CivixApp() {
   const [query, setQuery] = useState("")
+  const [routeStart, setRouteStart] = useState("")
+  const [routeEnd, setRouteEnd] = useState("")
+  const [routeBusy, setRouteBusy] = useState(false)
+  const [routeLine, setRouteLine] = useState(null)
   const [search, setSearch] = useState(null)
   const [activeMarker, setActiveMarker] = useState(null)
   const [savedPlaces, setSavedPlaces] = useLocalStorage("civixx.savedPlaces", [])
@@ -161,6 +165,52 @@ export default function CivixApp() {
     })
   }
 
+  const generateRoute = async event => {
+    event.preventDefault()
+    const start = routeStart.trim()
+    const end = routeEnd.trim()
+    if (!start || !end) {
+      setStatus("Bitte Start und Ziel eingeben.")
+      return
+    }
+
+    setRouteBusy(true)
+    setRouteLine(null)
+    try {
+      const [startResult, endResult] = await Promise.all([geocode(start), geocode(end)])
+      if (!startResult || !endResult) {
+        setStatus("Start oder Ziel konnte nicht gefunden werden.")
+        return
+      }
+
+      const startPosition = [Number.parseFloat(startResult.lat), Number.parseFloat(startResult.lon)]
+      const endPosition = [Number.parseFloat(endResult.lat), Number.parseFloat(endResult.lon)]
+      if (!BOUNDS.contains(startPosition) || !BOUNDS.contains(endPosition)) {
+        setStatus("Start oder Ziel liegt außerhalb des unterstützten Bereichs.")
+        return
+      }
+
+      const url = `https://router.project-osrm.org/route/v1/driving/${startPosition[1]},${startPosition[0]};${endPosition[1]},${endPosition[0]}?overview=full&geometries=geojson`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error("network")
+      const data = await response.json()
+      if (data.code !== "Ok" || !data.routes?.length) {
+        setStatus("Keine Route gefunden.")
+        return
+      }
+
+      const positions = data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon])
+      setRouteLine(positions)
+      setSearch({ position: startPosition, zoom: 13 })
+      setActiveMarker({ position: startPosition, title: startResult.display_name })
+      setStatus("Route generiert.")
+    } catch {
+      setStatus("Route konnte nicht generiert werden. Bitte später erneut versuchen.")
+    } finally {
+      setRouteBusy(false)
+    }
+  }
+
   const savedMarkers = useMemo(() => savedPlaces.map((place, index) => ({ ...place, index })), [savedPlaces])
 
   return (
@@ -196,6 +246,7 @@ export default function CivixApp() {
               {savedMarkers.map(place => (
                 <Marker key={`${place.index}-${place.label}`} position={[place.lat, place.lng]} icon={SEARCH_ICON} title={place.label} />
               ))}
+              {routeLine && <Polyline positions={routeLine} pathOptions={{ color: "#087e78", weight: 5, opacity: 0.85 }} />}
             </MapContainer>
 
             <div className="map-controls">
@@ -207,6 +258,13 @@ export default function CivixApp() {
                 <button className="secondary" type="button" aria-expanded={savedOpen} aria-controls="saved-panel" onClick={() => setSavedOpen(!savedOpen)}>
                   Gemerkt ({savedPlaces.length})
                 </button>
+              </form>
+              <form className="route-form" onSubmit={generateRoute}>
+                <label className="sr-only" htmlFor="route-start">Startpunkt</label>
+                <input id="route-start" value={routeStart} onChange={event => setRouteStart(event.target.value)} placeholder="Start" />
+                <label className="sr-only" htmlFor="route-end">Zielpunkt</label>
+                <input id="route-end" value={routeEnd} onChange={event => setRouteEnd(event.target.value)} placeholder="Ziel" />
+                <button type="submit" disabled={routeBusy}>{routeBusy ? "Route…" : "Route erstellen"}</button>
               </form>
               <p className={status ? "status active" : "status"} role="status" aria-live="polite">{status}</p>
             </div>

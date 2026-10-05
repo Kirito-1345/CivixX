@@ -53,6 +53,14 @@ Es gibt aktuell keinen Backenddienst. Anmeldung und Synchronisierung sind nicht 
 - Das Merkliste-Panel kann Orte erneut auf der Karte anzeigen oder entfernen.
 - Die Daten verlassen bei diesem Ablauf nicht den Browser.
 
+### Routenberechnung
+
+- Nutzende können einen Startpunkt und einen Zielpunkt eingeben.
+- Beide Eingaben werden über Nominatim geokodiert und gegen `BOUNDS` geprüft.
+- Die Route wird über den öffentlichen OSRM-Demo-Server (`router.project-osrm.org`) abgerufen.
+- Das Ergebnis wird als Polyline auf der Karte gezeichnet.
+- Die Zoom-Animation wurde langsamer gestellt (`duration: 2.5`).
+
 ### Standort
 
 - Die App verwendet `navigator.geolocation` und fragt den Browser nach Berechtigung.
@@ -64,6 +72,7 @@ Es gibt aktuell keinen Backenddienst. Anmeldung und Synchronisierung sind nicht 
 - React 19, React DOM und Vite 8
 - React Leaflet 5 und Leaflet 1.9
 - OpenStreetMap-Kacheln für die Kartendarstellung
+- OSRM-Demo-Server für Auto-Routen zwischen zwei eingegebenen Stops
 - Nominatim für Geocoding
 - Browser Local Storage für Merkliste und Suchcache
 - Browser Geolocation API für die optionale Standortanzeige
