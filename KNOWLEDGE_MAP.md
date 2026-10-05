@@ -29,7 +29,10 @@ Es gibt aktuell keinen Backenddienst. Anmeldung und Synchronisierung sind nicht 
 | Persistenz-Hook | `dist-react/src/hooks/useLocalStorage.js` | JSON lesen/schreiben und Fehler des lokalen Speichers abfangen |
 | Darstellung | `dist-react/src/index.css` | Globale und Komponenten-Styles |
 | Build-Konfiguration | `dist-react/vite.config.js`, `dist-react/package.json` | Vite-Konfiguration, Skripte und Abhängigkeiten |
-| Rechtliche Informationen | `privacy.html`, `cookies.html`, `terms.html` | Datenschutz, Cookie-Hinweise, Nutzungsbedingungen |
+| React-Seiten | `dist-react/src/pages/Privacy.jsx`, `dist-react/src/pages/Cookies.jsx`, `dist-react/src/pages/Terms.jsx` | Rechtliche React-Seiten mit einheitlichem Design |
+| React-Layout | `dist-react/src/components/SiteLayout.jsx` | Header, Navigation, Footer und Seitenrahmen für alle React-Routen |
+| React-Routing | `dist-react/src/App.jsx` | React-Routen für Karte, Datenschutz, Cookies, Nutzungsbedingungen und 404 |
+| Rechtliche Informationen | `privacy.html`, `cookies.html`, `terms.html` | Ältere eigenständige Rechtstexte; werden nicht mehr von der React-App genutzt |
 | Legacy/Standalone-App | `index.html` | Ältere eigenständige Leaflet-Implementierung mit Suche, Konto-Menü und Karte |
 
 `dist-react/public/` enthält Kopien der Rechtstexte und statische Assets für die React-Ausgabe.
