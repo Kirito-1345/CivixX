@@ -145,6 +145,26 @@ export default function CivixApp() {
     }
   }
 
+  const handleMapClick = latlng => {
+    const clickedPosition = [latlng.lat, latlng.lng]
+    const current = userPosition
+    if (current?.label === "Kartenpunkt" && distance({ lat: current.position[0], lng: current.position[1] }, { lat: clickedPosition[0], lng: clickedPosition[1] }) < 0.02) {
+      setUserPosition(null)
+      setRoute(null)
+      setNotice("Punkt entfernt.")
+      return
+    }
+    setUserPosition({ position: clickedPosition, label: "Kartenpunkt" })
+    setNotice("Punkt gesetzt.")
+  }
+
+  const removeMapPin = () => {
+    if (userPosition?.label !== "Kartenpunkt") return
+    setUserPosition(null)
+    setRoute(null)
+    setNotice("Punkt entfernt.")
+  }
+
   const navigateTo = async (start, destination) => {
     if (!start || !destination) { setNotice("Start und Ziel wählen."); return }
     setRouteBusy(true)
@@ -232,7 +252,7 @@ export default function CivixApp() {
               <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende' />
               <MapReady />
               <FlyTo target={searchResult} />
-              <MapEvents onSelect={latlng => { setUserPosition({ position: [latlng.lat, latlng.lng], label: "Kartenpunkt" }); setNotice("Punkt gesetzt.") }} />
+              <MapEvents onSelect={handleMapClick} />
               {INSTITUTIONS.map(item => (
                 <Marker key={item.id} position={[item.lat, item.lng]} icon={categoryIcon(CATEGORIES[item.category].color)} eventHandlers={{ click: () => select(item) }}>
                   <Popup>
@@ -241,7 +261,7 @@ export default function CivixApp() {
                 </Marker>
               ))}
               {selected && <Marker position={[selected.lat, selected.lng]} icon={SEARCH_ICON} />}
-              {userPosition && <Marker position={userPosition.position} icon={USER_ICON}><Popup>{userPosition.label || "Mein Standort"}</Popup></Marker>}
+              {userPosition && <Marker position={userPosition.position} icon={USER_ICON} eventHandlers={{ click: removeMapPin }}><Popup>{userPosition.label || "Mein Standort"}</Popup></Marker>}
               {searchResult && !selected && <Marker position={searchResult.position} icon={SEARCH_ICON}><Popup>{searchResult.label}</Popup></Marker>}
               {route && <Polyline positions={route.positions} pathOptions={{ color: "#087e78", weight: 5, opacity: 0.9 }} />}
             </MapContainer>
