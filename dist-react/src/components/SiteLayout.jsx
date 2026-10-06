@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Link, Outlet } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, Outlet, useLocation } from "react-router-dom"
 
 const LEGAL = [
   { to: "/datenschutz", label: "Datenschutz" },
@@ -8,13 +8,14 @@ const LEGAL = [
 ]
 
 export default function SiteLayout({ children }) {
+  const location = useLocation()
   const [cookieNotice, setCookieNotice] = useState(() => {
-    try {
-      return localStorage.getItem("civixx.cookieNotice") !== "accepted"
-    } catch {
-      return true
-    }
+    try { return localStorage.getItem("civixx.cookieNotice") !== "accepted" } catch { return true }
   })
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }, [location.pathname])
 
   const acceptCookies = () => {
     localStorage.setItem("civixx.cookieNotice", "accepted")
@@ -30,7 +31,7 @@ export default function SiteLayout({ children }) {
           </span>
           <span>
             <strong>CivixX</strong>
-            <small>Leipzig entdecken</small>
+            <small>Bildung entdecken</small>
           </span>
         </Link>
         <nav className="header-nav" aria-label="Hauptnavigation">
@@ -43,7 +44,7 @@ export default function SiteLayout({ children }) {
         <div className="cookie-popup" role="dialog" aria-modal="false" aria-labelledby="cookie-title" aria-describedby="cookie-text">
           <div>
             <h2 id="cookie-title">Hinweis</h2>
-            <p id="cookie-text">Diese Website verwendet keine Cookies und kein Tracking. Deine Merkliste wird nur lokal gespeichert.</p>
+            <p id="cookie-text">Diese Website verwendet keine Cookies und kein Tracking. Favoriten bleiben nur lokal in deinem Browser.</p>
           </div>
           <div className="cookie-actions">
             <button type="button" onClick={acceptCookies}>Verstanden</button>
