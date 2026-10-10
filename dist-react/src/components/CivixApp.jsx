@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { MapContainer, Marker, Polyline, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet"
 import L from "leaflet"
 import { useLocalStorage } from "../hooks/useLocalStorage.js"
@@ -106,7 +106,7 @@ export default function CivixApp() {
   const stageRef = useRef(null)
 
   const markers = useMemo(
-    () => Array.isArray(storedMarkers) ? storedMarkers.filter(item => item?.id && Number.isFinite(item.lat) && Number.isFinite(item.lng)) : [],
+    () => storedMarkers.filter(item => item?.id && Number.isFinite(item.lat) && Number.isFinite(item.lng)),
     [storedMarkers]
   )
 
@@ -133,7 +133,7 @@ export default function CivixApp() {
 
   const dropRouteFor = key => setRoute(current => current?.refs.includes(key) ? null : current)
 
-  const geocode = useCallback(async address => {
+  const geocode = async address => {
     const url = new URL("https://nominatim.openstreetmap.org/search")
     url.searchParams.set("q", address)
     url.searchParams.set("format", "jsonv2")
@@ -155,7 +155,7 @@ export default function CivixApp() {
       try { localStorage.setItem("civixx.geocodeCache", JSON.stringify(Object.fromEntries(cacheRef.current))) } catch { /* voll */ }
     }
     return result || null
-  }, [])
+  }
 
   const search = async event => {
     event.preventDefault()
@@ -188,36 +188,22 @@ export default function CivixApp() {
     }, () => notify("Standort konnte nicht ermittelt werden."), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 })
   }
 
-  const isSaved = useCallback(id => savedPlaces.some(item => item.id === id), [savedPlaces])
+  const isSaved = id => savedPlaces.some(item => item.id === id)
 
   const toggleSaved = item => {
     if (isSaved(item.id)) {
       setSavedPlaces(current => current.filter(({ id }) => id !== item.id))
       notify("Aus Favoriten entfernt.")
     } else {
-      setSavedPlaces(current => [{ id: item.id }, ...current].slice(0, 50))
+      setSavedPlaces(current => [{ id: item.id }, ...current])
       notify("Zu Favoriten hinzugefügt.")
     }
-  }
-
-  const handleMapClick = latlng => {
-    if (selected) { setSelected(null); return }
-    if (!BOUNDS.contains(latlng)) { notify("Dieser Punkt liegt außerhalb von Leipzig."); return }
-    if (markers.length >= MAX_MARKERS) { notify(`Maximal ${MAX_MARKERS} Markierungen. Entferne zuerst eine.`); return }
-    const marker = {
-      id: `m-${Date.now().toString(36)}-${toastId.current}`,
-      n: markers.reduce((max, item) => Math.max(max, item.n || 0), 0) + 1,
-      lat: latlng.lat,
-      lng: latlng.lng
-    }
-    setMarkers(current => [marker, ...(Array.isArray(current) ? current : [])])
-    notify(`Markierung ${marker.n} gesetzt.`, { label: "Rückgängig", run: () => removeMarker(marker.id, true) })
   }
 
   const removeMarker = (id, silent = false) => {
     const index = markers.findIndex(item => item.id === id)
     const removed = markers[index]
-    setMarkers(current => Array.isArray(current) ? current.filter(item => item.id !== id) : [])
+    setMarkers(current => current.filter(item => item.id !== id))
     setSelected(current => current?.kind === "marker" && current.id === id ? null : current)
     dropRouteFor(`marker:${id}`)
     if (silent || !removed) return
@@ -287,6 +273,20 @@ export default function CivixApp() {
     ]
     return candidates.find(item => item && item.key !== keyOf(detail)) || null
   }, [detail, userPosition, searchResult, markers])
+
+  const handleMapClick = latlng => {
+    if (detail) { setSelected(null); return }
+    if (!BOUNDS.contains(latlng)) { notify("Dieser Punkt liegt außerhalb von Leipzig."); return }
+    if (markers.length >= MAX_MARKERS) { notify(`Maximal ${MAX_MARKERS} Markierungen. Entferne zuerst eine.`); return }
+    const marker = {
+      id: `m-${Date.now().toString(36)}-${toastId.current}`,
+      n: markers.reduce((max, item) => Math.max(max, item.n || 0), 0) + 1,
+      lat: latlng.lat,
+      lng: latlng.lng
+    }
+    setMarkers(current => [marker, ...current])
+    notify(`Markierung ${marker.n} gesetzt.`, { label: "Rückgängig", run: () => removeMarker(marker.id, true) })
+  }
 
   const navigateTo = async (start, destination) => {
     setRouteBusy(true)
@@ -398,7 +398,7 @@ export default function CivixApp() {
               {markers.length > 0 && (
                 <div className="list-head">
                   <span>Auf der Karte gesetzt</span>
-                  <button type="button" className="link-btn danger" onClick={clearMarkers}>Alle entfernen</button>
+                  <button type="button" className="link-btn danger" onClick={clearMarkers} disabled={routeBusy}>Alle entfernen</button>
                 </div>
               )}
               <ul className="list">
@@ -411,7 +411,7 @@ export default function CivixApp() {
                         <small>{formatCoords(item)}</small>
                       </span>
                     </button>
-                    <button type="button" className="icon-btn danger" onClick={() => removeMarker(item.id)} aria-label={`Markierung ${item.n} entfernen`} title="Entfernen">
+                    <button type="button" className="icon-btn danger" onClick={() => removeMarker(item.id)} disabled={routeBusy} aria-label={`Markierung ${item.n} entfernen`} title="Entfernen">
                       <Icon name="trash" />
                     </button>
                   </li>
@@ -491,7 +491,7 @@ export default function CivixApp() {
                   <Icon name="star" filled={isSaved(detail.id)} />{isSaved(detail.id) ? "Gemerkt" : "Merken"}
                 </button>
               ) : (
-                <button type="button" className="btn btn-danger" onClick={() => removeDetail(detail)}>
+                <button type="button" className="btn btn-danger" onClick={() => removeDetail(detail)} disabled={routeBusy}>
                   <Icon name="trash" />Entfernen
                 </button>
               )}
