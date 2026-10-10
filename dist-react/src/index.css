@@ -72,7 +72,7 @@ ul { padding: 0; list-style: none; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s, border-color .15s; }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:disabled, .icon-btn:disabled, .link-btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { border-color: transparent; background: var(--accent); color: var(--on-accent); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
 .btn-danger { border-color: transparent; background: var(--danger-soft); color: var(--danger); }
