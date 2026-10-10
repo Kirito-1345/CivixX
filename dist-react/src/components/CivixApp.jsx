@@ -135,7 +135,7 @@ export default function CivixApp() {
 
   const geocode = useCallback(async address => {
     const url = new URL("https://nominatim.openstreetmap.org/search")
-    url.searchParams.set("q", `${address}, Leipzig`)
+    url.searchParams.set("q", address)
     url.searchParams.set("format", "jsonv2")
     url.searchParams.set("limit", "1")
     url.searchParams.set("countrycodes", "de")
@@ -195,7 +195,7 @@ export default function CivixApp() {
       setSavedPlaces(current => current.filter(({ id }) => id !== item.id))
       notify("Aus Favoriten entfernt.")
     } else {
-      setSavedPlaces(current => [{ ...item }, ...current].slice(0, 50))
+      setSavedPlaces(current => [{ id: item.id }, ...current].slice(0, 50))
       notify("Zu Favoriten hinzugefügt.")
     }
   }

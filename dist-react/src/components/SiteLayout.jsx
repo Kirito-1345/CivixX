@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 
 const LEGAL = [
@@ -7,20 +7,11 @@ const LEGAL = [
   { to: "/nutzungsbedingungen", label: "Nutzungsbedingungen" }
 ]
 
-export default function SiteLayout({ children }) {
+export default function SiteLayout() {
   const location = useLocation()
-  const [cookieNotice, setCookieNotice] = useState(() => {
-    try { return localStorage.getItem("civixx.cookieNotice") !== "accepted" } catch { return true }
-  })
-
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }, [location.pathname])
-
-  const acceptCookies = () => {
-    try { localStorage.setItem("civixx.cookieNotice", "accepted") } catch { /* Speicher nicht verfügbar */ }
-    setCookieNotice(false)
-  }
 
   return (
     <div className="page">
@@ -36,16 +27,7 @@ export default function SiteLayout({ children }) {
           <NavLink to="/datenschutz">Datenschutz</NavLink>
         </nav>
       </header>
-      {children || <Outlet />}
-      {cookieNotice && (
-        <div className="cookie-popup" role="dialog" aria-modal="false" aria-labelledby="cookie-title" aria-describedby="cookie-text">
-          <div>
-            <h2 id="cookie-title">Keine Cookies, kein Tracking</h2>
-            <p id="cookie-text">Favoriten und Markierungen bleiben nur lokal in deinem Browser.</p>
-          </div>
-          <button type="button" className="btn btn-primary" onClick={acceptCookies}>Verstanden</button>
-        </div>
-      )}
+      <Outlet />
       <footer className="site-footer">
         <p>CivixX · privates Hobby-Projekt · Kartendaten © OpenStreetMap-Mitwirkende</p>
         <nav aria-label="Rechtliches">
