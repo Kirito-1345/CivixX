@@ -43,12 +43,13 @@ flowchart LR
 3. Erfolgreiche Geocoding-Ergebnisse werden mit 24 Stunden Ablaufzeit im Browser unter `civixx.geocodeCache` gespeichert; beim Start werden nur noch gültige Cache-Einträge geladen.
 4. Die Karte prüft das Ergebnis gegen `BOUNDS`, fliegt mit `SearchFlyTo` zur Adresse und zeigt Marker sowie Statusmeldung. Laufende Geocoding-Anfragen können über `AbortController` abgebrochen werden.
 
-### Merkliste und Kartenklick
+### Markierungen, Favoriten und Kartenklick
 
-- Ein Klick auf die Karte setzt einen Marker und fügt Koordinaten und Koordinaten-Label der Merkliste hinzu.
-- `useLocalStorage` speichert die Merkliste unter `civixx.savedPlaces`.
-- Das Merkliste-Panel kann Orte erneut auf der Karte anzeigen oder entfernen; die gespeicherten Marker werden zusätzlich direkt auf der Karte gerendert.
-- Merkliste und Geocoding-Cache verlassen bei diesen Abläufen nicht den Browser.
+- Ein Klick auf die freie Karte setzt eine nummerierte Markierung (maximal 50). Ist gerade ein Ort ausgewählt, hebt der Klick nur die Auswahl auf.
+- Markierungen liegen über `useLocalStorage` unter `civixx.markers`, Favoriten (nur Einrichtungen) unter `civixx.savedPlaces.v2`.
+- Markierungen lassen sich einzeln entfernen (Papierkorb im Tab „Markierungen“ oder „Entfernen“ in der Detailkarte nach Klick auf den Pin) sowie gesammelt über „Alle entfernen“. Jede Entfernung kann über „Rückgängig“ in der Statusmeldung zurückgenommen werden.
+- Suchergebnis-Pin, Standort-Pin und Route sind ebenfalls entfernbar (Detailkarte bzw. Schließen-Knopf der Routenleiste). Wird ein Endpunkt einer Route entfernt, verschwindet auch die Route.
+- Markierungen, Favoriten und Geocoding-Cache verlassen den Browser nicht.
 
 ### Routenberechnung
 
@@ -111,9 +112,8 @@ Zusätzlich ist `npm run lint` (Oxlint) definiert. Es gibt im Paket derzeit kein
 - Die React-App unter `dist-react/` ist die im README beschriebene Version. Das Root-`index.html` ist eine separate ältere Standalone-App und wird vom React-Routing nicht gerendert.
 - Die React-Version bietet Karte, Suche, Standort, Merkliste, Routenberechnung und Hinweise. Konto-/Google-Anmeldung erscheint nur in der Standalone-`index.html`.
 - Nominatim und der OSRM-Demo-Server sind öffentliche Dienste. Verfügbarkeit und Nutzungsbedingungen liegen außerhalb der App; der lokale Cache betrifft nur Geocoding-Ergebnisse, nicht die Kartenkacheln oder Routen.
-- `MapReady` setzt den Karten-Ladezustand; `SearchFlyTo` übernimmt die animierte Navigation zu Such-, Standort- oder Merkliste-Zielen.
-- Die CSS-Kartensteuerung und Merkliste sind im aktuellen Stylesheet im Dokumentfluss angeordnet, nicht als Overlay über der Karte.
-- Vorhandene Änderungen an `CivixApp.jsx` und `index.css` verändern die Kartensteuerungen und das Merkliste-Panel. Die Knowledge Map beschreibt die aktuelle Struktur; diese Änderungen wurden bei der Aktualisierung nicht verändert.
+- `FlyTo` übernimmt die animierte Navigation zu Such-, Standort-, Listen- und Routenzielen.
+- Layout: ab 861 px Seitenleiste (Suche, Tabs „Orte / Favoriten / Markierungen“) neben einer fensterhohen Karte; darunter Suche, Karte und Listen untereinander. Statusmeldung, Routenleiste und Detailkarte liegen als Overlay über der Karte. Farben sind CSS-Variablen mit Hell- und Dunkelmodus (`prefers-color-scheme`).
 
 ## Orientierung für Änderungen
 
