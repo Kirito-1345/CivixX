@@ -7,24 +7,23 @@ CivixX ist eine interaktive Karte für Bildungseinrichtungen in und um Leipzig. 
 - Interaktive Karte von Leipzig
 - Adresssuche in Leipzig und Umgebung
 - Standortanzeige über den Browser
-- Eigene Marker durch Klick auf die Karte
-- Gemerkte Orte werden lokal gespeichert
-- Konto-Bereich mit vorbereiteter Google-Anmeldung
+- Eigene Marker durch Klick auf die Karte, einzeln entfernbar
+- Favoriten und Marker werden lokal gespeichert
+- Auto-Route zu einem ausgewählten Ort
 - Responsives Design für Desktop und Mobilgeräte
-- Animierter Hintergrund mit Rücksicht auf reduzierte Bewegung
 - Barrierefreie Steuerung, klare Labels und gute Kontraste
 - Kein Tracking und keine Cookies
 
 ## Seiten
 
-- `index.html` – Karte, Suche und Konto
-- `privacy.html` – Datenschutz
-- `cookies.html` – Cookie-Hinweise
-- `terms.html` – Nutzungsbedingungen
+- `/` – Karte, Suche, Favoriten und Marker
+- `/#/datenschutz` – Datenschutz
+- `/#/cookies` – Cookie-Hinweise
+- `/#/nutzungsbedingungen` – Nutzungsbedingungen
 
 ## Technologie
 
-Die React-Version liegt in `dist-react/` und nutzt React, Vite, React Leaflet, Leaflet sowie OpenStreetMap/Nominatim. Suchergebnisse werden vorübergehend zwischengespeichert, um wiederholte Anfragen zu vermeiden.
+Die React-Version liegt in `dist-react/` und nutzt React, Vite, React Leaflet, Leaflet sowie OpenStreetMap/Nominatim und den öffentlichen OSRM-Server für Routen. Suchergebnisse werden vorübergehend zwischengespeichert, um wiederholte Anfragen zu vermeiden.
 
 ```bash
 cd dist-react
@@ -40,18 +39,8 @@ npm run build
 npm run preview
 ```
 
-## Entwicklung
-
-Zum Ausprobieren reicht ein einfacher lokaler Webserver:
-
-```bash
-python3 -m http.server 8000
-```
-
-Danach ist die Seite unter `http://localhost:8000` erreichbar.
-
 ## Hinweise
 
-Die Google-Anmeldung und Synchronisierung sind vorbereitet, aber noch nicht aktiviert. Für den Live-Betrieb werden eine Google OAuth-Konfiguration und ein Speicherdienst benötigt.
+Es gibt keine Anmeldung und keine Synchronisierung; alle Daten bleiben im Browser.
 
 Kartendaten: © OpenStreetMap-Mitwirkende.
