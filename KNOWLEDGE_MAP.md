@@ -27,8 +27,10 @@ flowchart LR
 | Hauptfunktionalität | `dist-react/src/components/CivixApp.jsx` | Kartenansicht, Suche, Routenberechnung, Geolocation, Marker und Merkliste |
 | Persistenz-Hook | `dist-react/src/hooks/useLocalStorage.js` | JSON lesen/schreiben und Fehler des lokalen Speichers abfangen |
 | Gemeinsames Seitenlayout | `dist-react/src/components/SiteLayout.jsx` | Header, Navigation, Footer und Rahmen für React-Seiten |
+| UI-Bausteine | `dist-react/src/components/LegalPage.jsx`, `SectionLabel.jsx`, `CategoryShape.jsx` | Gemeinsames Layout der Rechtstexte, nummerierte Abschnittslabels und Kategorie-Formen (Liste, Filter, Kartenmarker) |
 | Rechtliche React-Seiten | `dist-react/src/pages/Privacy.jsx`, `dist-react/src/pages/Cookies.jsx`, `dist-react/src/pages/Terms.jsx` | Datenschutz, Cookie-Hinweise und Nutzungsbedingungen |
-| Darstellung | `dist-react/src/index.css` | Globale, Layout-, Karten- und Komponenten-Styles |
+| Darstellung | `dist-react/src/index.css` | Design-Tokens (Swiss Style: Schwarz/Weiß/Grau, Akzent `#FF3000`, keine Radien/Schatten), Muster-Klassen, Primitive (`.btn`, `.section-label`) sowie Layout- und Karten-Styles |
+| Darstellung statischer Seiten | `swiss.css`, `dist-react/public/swiss.css` | Dieselben Tokens für `index.html` und die statischen Rechtstexte; beide Kopien synchron halten |
 | Build-Konfiguration | `dist-react/vite.config.js`, `dist-react/package.json` | Vite-Konfiguration, Skripte und Abhängigkeiten |
 | Ältere Rechtstexte | `privacy.html`, `cookies.html`, `terms.html` | Eigenständige statische Fassungen außerhalb des React-Routings |
 | Statische React-Assets | `dist-react/public/` | Kopien der Rechtstexte und statische Assets für Vite |
@@ -118,6 +120,7 @@ Zusätzlich ist `npm run lint` (Oxlint) definiert. Es gibt im Paket derzeit kein
 ## Orientierung für Änderungen
 
 - UI und Nutzerabläufe: `dist-react/src/components/CivixApp.jsx`
+- Kategorien: `dist-react/src/data/institutions.js` – jede Kategorie hat eine Form (`shape`, SVG-Pfad) statt einer Farbe; Rot ist für Auswahl und Route reserviert
 - Kartenregion oder Startansicht: Konstanten `LEIPZIG` und `BOUNDS` in derselben Datei
 - Local Storage-Verhalten: `dist-react/src/hooks/useLocalStorage.js`
 - Routing und 404: `dist-react/src/App.jsx`

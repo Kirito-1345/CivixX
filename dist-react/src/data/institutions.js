@@ -1,9 +1,10 @@
+// shape: SVG-Pfad im 16×16-Raster – Kategorien werden über Form statt Farbe unterschieden.
 export const CATEGORIES = {
-  schule: { label: "Schulen", color: "#0d7d8c" },
-  hochschule: { label: "Hochschulen", color: "#7a4ecb" },
-  bibliothek: { label: "Bibliotheken", color: "#b3541e" },
-  vhs: { label: "Weiterbildung", color: "#2b7a3b" },
-  kita: { label: "Kitas", color: "#c2477a" }
+  schule: { label: "Schulen", shape: "M2 2h12v12H2z" },
+  hochschule: { label: "Hochschulen", shape: "M8 1.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 0 0 0-13z" },
+  bibliothek: { label: "Bibliotheken", shape: "M8 1.5L15 14H1z" },
+  vhs: { label: "Weiterbildung", shape: "M8 .5L15.5 8L8 15.5L.5 8z" },
+  kita: { label: "Kitas", shape: "M6 1h4v5h5v4h-5v5H6v-5H1V6h5z" }
 }
 
 export const INSTITUTIONS = [

@@ -5,48 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CivixX – Bildungseinrichtungen in Leipzig</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="swiss.css">
   <style>
-    :root {
-      color-scheme: light;
-      --ink: #142b35;
-      --muted: #61757b;
-      --teal: #087e78;
-      --line: #dce8e6;
-      --paper: #fff;
-      --shadow: 0 18px 55px rgba(22, 54, 58, .15);
-    }
-
-    html, body {
-      margin: 0;
-      min-height: 100%;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--ink);
-      background: #f3f8f6;
-    }
-
     #background {
       position: fixed;
       inset: 0;
       z-index: -1;
-      overflow: hidden;
-      background:
-        radial-gradient(ellipse at 10% 10%, rgba(61, 166, 151, .12), transparent 42%),
-        radial-gradient(ellipse at 90% 85%, rgba(213, 171, 105, .12), transparent 40%),
-        linear-gradient(145deg, #f5faf8, #edf5f2 55%, #f9f7f1);
-      background-size: 100% 100%;
-    }
-
-    #background::before {
-      content: "";
-      position: absolute;
-      inset: -20%;
-      background: radial-gradient(ellipse at center, transparent 40%, rgba(255,255,255,.16));
     }
 
     #map {
       width: 100%;
       height: clamp(520px, 82vh, 920px);
-      background: #e2e8f0;
+      border-bottom: var(--rule-heavy) solid var(--fg);
+      background: var(--muted);
+      font: inherit;
     }
 
     #map.loading::after {
@@ -55,24 +27,31 @@
       inset: 0;
       display: grid;
       place-items: center;
-      font: inherit;
-      color: #334155;
-      background: rgba(226, 232, 240, .8);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: var(--track-label);
+      text-transform: uppercase;
+      background: var(--muted);
     }
+
+    /* Kacheln und Standard-Marker in die monochrome Palette holen */
+    .leaflet-tile-pane { filter: grayscale(1) contrast(1.08); }
+    .leaflet-marker-icon { filter: grayscale(1) brightness(.35); }
+    .leaflet-marker-shadow { display: none; }
+    #map .leaflet-bar { border: var(--rule) solid var(--fg); border-radius: 0; box-shadow: none; }
+    #map .leaflet-bar a { border-radius: 0; border-bottom-color: var(--fg); color: var(--fg); }
+    #map .leaflet-bar a:hover { background: var(--fg); color: var(--bg); }
+    .leaflet-popup-content-wrapper { border: var(--rule) solid var(--fg); border-radius: 0; box-shadow: none; }
+    .leaflet-popup-tip { border: var(--rule) solid var(--fg); box-shadow: none; }
 
     main {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 30px 24px 42px;
+      padding: var(--gutter);
     }
 
-    a {
-      color: var(--teal);
-    }
-
-    #controls nav a:visited {
-      color: #536c69;
-    }
+    main > p { max-width: 60ch; margin: 20px 0 0; }
+    main nav { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 28px; font-size: 12px; font-weight: 700; letter-spacing: var(--track-label); text-transform: uppercase; }
+    main nav a { text-decoration-thickness: var(--rule); text-underline-offset: 4px; }
+    main nav a:hover { color: var(--accent-ink); }
 
     .sr-only {
       position: absolute;
@@ -93,87 +72,85 @@
       z-index: 1000;
       width: min(370px, calc(100vw - 48px));
       padding: 22px;
-      background: rgba(255, 255, 255, .96);
-      border: 1px solid rgba(255, 255, 255, .85);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(14px);
-      box-sizing: border-box;
+      border: var(--rule-heavy) solid var(--fg);
+      background: var(--bg);
     }
 
-    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 20px; }
-    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: linear-gradient(145deg, #0d9186, #086d68); }
-    .brand-mark svg { width: 21px; height: 21px; }
-    .brand-name { font-weight: 800; font-size: 17px; letter-spacing: -.04em; }
-    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
-    .eyebrow { margin: 0 0 7px; color: var(--teal); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-    #controls h2 { margin: 0; font-size: 23px; line-height: 1.16; letter-spacing: -.045em; }
-    .intro { margin: 8px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .brand-mark { width: 44px; height: 44px; display: grid; place-items: center; color: var(--bg); background: var(--fg); }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { display: block; font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: var(--track-tight); text-transform: uppercase; }
+    .brand-caption { display: block; margin-top: 4px; font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: var(--track-label); text-transform: uppercase; }
+    .eyebrow { margin: 0 0 8px; color: var(--accent-ink); font-size: 11px; font-weight: 700; line-height: 1.2; letter-spacing: var(--track-label); text-transform: uppercase; }
+    #controls h2 { margin: 0; font-size: 28px; font-weight: 900; line-height: 1; letter-spacing: var(--track-tight); text-transform: uppercase; }
+    .intro { margin: 10px 0 18px; font-size: 13px; line-height: 1.5; }
 
-    #search { display: flex; gap: 7px; }
-
-    #search input:focus,
-    button:focus-visible {
-      outline: 3px solid #69c4b8;
-      outline-offset: 2px;
-    }
+    #search { display: flex; gap: 8px; }
 
     #search input {
       flex: 1;
       min-width: 0;
-      padding: 11px 12px;
-      border: 1px solid #cbdad7;
-      border-radius: 10px;
-      color: var(--ink);
+      min-height: 44px;
+      padding: 0 12px;
+      border: var(--rule) solid var(--fg);
+      border-radius: 0;
+      color: var(--fg);
       font: inherit;
-      font-size: 13px;
-      background: #fbfdfc;
+      font-size: 14px;
+      background: var(--bg);
     }
+
+    #search input::placeholder { color: var(--fg); opacity: .55; }
+    #search input:focus-visible { outline: none; border-color: var(--accent); box-shadow: inset 0 0 0 var(--rule) var(--accent); }
 
     button {
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #f6faf8;
-      color: var(--ink);
+      min-height: 44px;
+      padding: 0 14px;
+      border: var(--rule) solid var(--fg);
+      border-radius: 0;
+      background: var(--bg);
+      color: var(--fg);
       font: inherit;
-      font-size: 13px;
-      font-weight: 650;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
       cursor: pointer;
-      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+      transition: background-color var(--snap), border-color var(--snap), color var(--snap);
     }
 
-    button:hover:not(:disabled) { background: #eaf4f1; transform: translateY(-1px); }
-    button:disabled { cursor: not-allowed; opacity: .65; }
-    #search-button { border-color: var(--teal); color: #fff; background: var(--teal); white-space: nowrap; }
-    #search-button:hover:not(:disabled) { background: #066c67; }
+    button:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+    button:disabled { cursor: not-allowed; opacity: .4; }
+    #search-button { background: var(--fg); color: var(--bg); white-space: nowrap; }
+    #search-button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); color: var(--fg); }
 
-    #location-button { width: 100%; margin-top: 8px; text-align: left; }
+    #location-button, #account-button { width: 100%; margin-top: 8px; text-align: left; }
 
     #message {
       display: none;
       margin-top: 8px;
-      padding: 10px;
-      border-radius: 10px;
-      background: #fee2e2;
-      color: #8a1818;
+      padding: 10px 12px;
+      border-left: 8px solid var(--accent);
+      background: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
     }
 
     #message:empty { display: none; }
 
     #login-menu {
       display: none;
-      margin-top: 6px;
+      margin-top: 8px;
       padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #fff;
+      border: var(--rule) solid var(--fg);
       font-size: 13px;
     }
 
+    #login-menu hr { border: 0; border-top: var(--rule) solid var(--fg); }
+
     #saved-list {
       display: grid;
-      gap: 7px;
+      gap: 8px;
     }
 
     .saved-item {
@@ -181,61 +158,24 @@
       justify-content: space-between;
       align-items: center;
       gap: 8px;
-      padding: 8px 9px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: #f7faf9;
+      padding: 8px;
+      border: var(--rule) solid var(--fg);
       font-size: 12px;
     }
 
-    .saved-item button {
-      padding: 4px 8px;
-    }
-
-    .dialog {
-      position: fixed;
-      inset: 0;
-      display: none;
-      place-items: center;
-      background: rgba(15, 23, 42, .35);
-      z-index: 1100;
-    }
-
-    .dialog[open] {
-      display: grid;
-    }
-
-    .dialog-box {
-      max-width: 520px;
-      width: min(520px, calc(100vw - 24px));
-      padding: 20px;
-      border-radius: 18px;
-      background: #fff;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, .2);
-    }
-
-    .privacy-note { margin: 15px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-    main h1 { margin: 0 0 8px; font-size: clamp(23px, 3vw, 34px); letter-spacing: -.045em; }
-    main > p { max-width: 680px; color: var(--muted); line-height: 1.65; }
-    main nav { margin-top: 22px; font-size: 13px; }
+    .privacy-note { margin: 14px 0 0; font-size: 11px; line-height: 1.5; }
 
     @media (max-width: 640px) {
       #map { height: 72svh; min-height: 590px; }
-      #controls { top: 12px; left: 12px; width: min(370px, calc(100vw - 24px)); padding: 17px; border-radius: 16px; }
-      .brand { margin-bottom: 15px; }
-      #controls h2 { font-size: 21px; }
+      #controls { top: 12px; left: 12px; width: min(370px, calc(100vw - 24px)); padding: 16px; }
+      .brand { margin-bottom: 14px; }
+      #controls h2 { font-size: 24px; }
       #search { flex-direction: column; }
-      #search-button { min-height: 42px; }
-      #location-button { min-height: 42px; }
-      main { padding: 26px 18px 36px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
 <body>
-  <div id="background" aria-hidden="true"></div>
+  <div id="background" class="swiss-grid-pattern" aria-hidden="true"></div>
   <div id="map" class="loading" role="region" aria-label="Karte von Leipzig" aria-busy="true"></div>
 
   <section id="controls" aria-label="Kartensteuerung">
