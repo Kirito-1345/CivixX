@@ -1,35 +1,34 @@
 # CivixX
 
-CivixX ist eine interaktive Karte für Bildungseinrichtungen in und um Leipzig. Nutzer können Orte entdecken, Adressen suchen und ihren Standort auf der Karte anzeigen lassen.
+CivixX ist eine interaktive Karte für Bildungseinrichtungen in und um Leipzig. Nutzer können Einrichtungen entdecken, Adressen suchen, ihren Standort anzeigen lassen und eine Route zu einer Einrichtung berechnen.
 
 ## Funktionen
 
-- Interaktive Karte von Leipzig
-- Adresssuche in Leipzig und Umgebung
-- Standortanzeige über den Browser
-- Eigene Marker durch Klick auf die Karte
-- Gemerkte Orte werden lokal gespeichert
-- Konto-Bereich mit vorbereiteter Google-Anmeldung
+- Interaktive Karte von Leipzig mit Schulen, Hochschulen, Bibliotheken, Weiterbildung und Kitas
+- Filter nach Kategorie und Textsuche in der Liste
+- Adresssuche in Leipzig und Umgebung, Liste sortiert nach Entfernung
+- Standortanzeige über den Browser oder eigener Startpunkt per Klick auf die Karte
+- Auto-Route vom Startpunkt zur ausgewählten Einrichtung
+- Favoriten werden lokal im Browser gespeichert
 - Responsives Design für Desktop und Mobilgeräte
-- Animierter Hintergrund mit Rücksicht auf reduzierte Bewegung
-- Barrierefreie Steuerung, klare Labels und gute Kontraste
 - Kein Tracking und keine Cookies
-
-## Seiten
-
-- `index.html` – Karte, Suche und Konto
-- `privacy.html` – Datenschutz
-- `cookies.html` – Cookie-Hinweise
-- `terms.html` – Nutzungsbedingungen
 
 ## Technologie
 
-Die React-Version liegt in `dist-react/` und nutzt React, Vite, React Leaflet, Leaflet sowie OpenStreetMap/Nominatim. Suchergebnisse werden vorübergehend zwischengespeichert, um wiederholte Anfragen zu vermeiden.
+Die App liegt in `dist-react/` und nutzt React, Vite, React Leaflet und Leaflet. Externe Dienste: OpenStreetMap-Kacheln, Nominatim (Adresssuche) und der öffentliche OSRM-Server (Routen). Suchergebnisse werden 24 Stunden im Browser zwischengespeichert, um wiederholte Anfragen zu vermeiden.
 
 ```bash
 cd dist-react
 npm install
 npm run dev
+```
+
+Tests und Lint:
+
+```bash
+cd dist-react
+npm test
+npm run lint
 ```
 
 Für den Produktions-Build:
@@ -40,18 +39,10 @@ npm run build
 npm run preview
 ```
 
-## Entwicklung
-
-Zum Ausprobieren reicht ein einfacher lokaler Webserver:
-
-```bash
-python3 -m http.server 8000
-```
-
-Danach ist die Seite unter `http://localhost:8000` erreichbar.
+Die App nutzt Pfade wie `/datenschutz`. Der Webserver muss unbekannte Pfade deshalb auf `index.html` umleiten.
 
 ## Hinweise
 
-Die Google-Anmeldung und Synchronisierung sind vorbereitet, aber noch nicht aktiviert. Für den Live-Betrieb werden eine Google OAuth-Konfiguration und ein Speicherdienst benötigt.
+Die Einrichtungen stehen von Hand gepflegt in `dist-react/src/data/institutions.js`.
 
 Kartendaten: © OpenStreetMap-Mitwirkende.

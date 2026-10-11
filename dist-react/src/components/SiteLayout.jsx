@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom"
 
 const NAV = [
@@ -12,20 +12,12 @@ const LEGAL = [
   { to: "/nutzungsbedingungen", label: "Nutzungsbedingungen" }
 ]
 
-export default function SiteLayout({ children }) {
+export default function SiteLayout() {
   const location = useLocation()
-  const [cookieNotice, setCookieNotice] = useState(() => {
-    try { return localStorage.getItem("civixx.cookieNotice") !== "accepted" } catch { return true }
-  })
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    window.scrollTo(0, 0) // Verhalten (weich/sofort) regelt das Stylesheet inkl. prefers-reduced-motion
   }, [location.pathname])
-
-  const acceptCookies = () => {
-    localStorage.setItem("civixx.cookieNotice", "accepted")
-    setCookieNotice(false)
-  }
 
   return (
     <div className="page">
@@ -45,18 +37,7 @@ export default function SiteLayout({ children }) {
           ))}
         </nav>
       </header>
-      {children || <Outlet />}
-      {cookieNotice && (
-        <div className="cookie-popup" role="dialog" aria-modal="false" aria-labelledby="cookie-title" aria-describedby="cookie-text">
-          <div>
-            <h2 className="eyebrow" id="cookie-title">Hinweis</h2>
-            <p id="cookie-text">Diese Website verwendet keine Cookies und kein Tracking. Favoriten bleiben nur lokal in deinem Browser.</p>
-          </div>
-          <div className="cookie-actions">
-            <button className="btn" type="button" onClick={acceptCookies}>Verstanden</button>
-          </div>
-        </div>
-      )}
+      <Outlet />
       <footer className="site-footer">
         <div className="footer-main">
           <p className="footer-mark" aria-hidden="true">CivixX</p>

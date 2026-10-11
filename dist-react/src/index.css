@@ -74,9 +74,6 @@ h1, h2, p, dl, dd, ul { margin: 0; }
 .site-footer nav a:hover { background: var(--accent); color: var(--fg); }
 .site-footer nav a:focus-visible { outline-offset: -4px; }
 
-.cookie-popup { position: fixed; left: 16px; bottom: 16px; z-index: 1200; width: min(520px, calc(100% - 32px)); display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 20px; border: var(--rule-heavy) solid var(--fg); background: var(--bg); }
-.cookie-popup h2 { margin-bottom: 8px; }
-.cookie-popup p { font-size: 13px; line-height: 1.5; }
 
 /* ── Kartenseite: Kopf ─────────────────────────────────────────────── */
 main { flex: 1; width: 100%; }
@@ -214,6 +211,5 @@ main { flex: 1; width: 100%; }
   .search-panel .btn, .detail-actions .btn { min-height: 56px; }
   .detail-actions { width: 100%; }
   .detail-actions .btn { flex: 1 1 100%; }
-  .cookie-popup { flex-direction: column; align-items: stretch; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }

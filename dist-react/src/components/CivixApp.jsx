@@ -3,18 +3,13 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents 
 import L from "leaflet"
 import { useLocalStorage } from "../hooks/useLocalStorage.js"
 import { CATEGORIES, INSTITUTIONS } from "../data/institutions.js"
+import { byDistanceThenName, distance } from "../geo.js"
 import CategoryShape from "./CategoryShape.jsx"
 import SectionLabel from "./SectionLabel.jsx"
 
 const LEIPZIG = [51.3397, 12.3731]
 const BOUNDS = L.latLngBounds([51.12, 12.00], [51.56, 12.75])
 const STORAGE_KEY = "civixx.savedPlaces.v2"
-
-const distance = (a, b) => {
-  const x = Math.cos((a.lat + b.lat) * Math.PI / 360) * (a.lng - b.lng)
-  const y = a.lat - b.lat
-  return 111.32 * Math.hypot(x, y)
-}
 
 const ROUTE_COLOR = "#ff3000"
 
@@ -42,12 +37,6 @@ const USER_ICON = L.divIcon({
   iconAnchor: [10, 10]
 })
 
-function MapReady({ onReady }) {
-  const map = useMap()
-  useEffect(() => { onReady?.(map) }, [map, onReady])
-  return null
-}
-
 function FlyTo({ target }) {
   const map = useMap()
   useEffect(() => {
@@ -64,6 +53,7 @@ function MapEvents({ onSelect }) {
 export default function CivixApp() {
   const [query, setQuery] = useState("")
   const [searchResult, setSearchResult] = useState(null)
+  const [flyTarget, setFlyTarget] = useState(null)
   const [userPosition, setUserPosition] = useState(null)
   const [route, setRoute] = useState(null)
   const [routeBusy, setRouteBusy] = useState(false)
@@ -71,9 +61,11 @@ export default function CivixApp() {
   const [notice, setNotice] = useState("")
   const [activeCategory, setActiveCategory] = useState("alle")
   const [selected, setSelected] = useState(null)
-  const [savedPlaces, setSavedPlaces] = useLocalStorage(STORAGE_KEY, [])
+  const [stored, setSavedIds] = useLocalStorage(STORAGE_KEY, [])
+  // Ältere Versionen speicherten ganze Einträge statt IDs.
+  const savedIds = stored.map(entry => entry?.id ?? entry)
+  const savedPlaces = savedIds.map(id => INSTITUTIONS.find(item => item.id === id)).filter(Boolean)
   const cacheRef = useRef(new Map())
-  const abortRef = useRef(null)
 
   useEffect(() => {
     try {
@@ -103,9 +95,7 @@ export default function CivixApp() {
     const cached = cacheRef.current.get(cacheKey)
     if (cached?.expires > Date.now()) return cached.result
 
-    abortRef.current?.abort()
-    abortRef.current = new AbortController()
-    const response = await fetch(url, { signal: abortRef.current.signal })
+    const response = await fetch(url)
     if (!response.ok) throw new Error("network")
     const [result] = await response.json()
     if (result) {
@@ -125,8 +115,10 @@ export default function CivixApp() {
       if (!result) { setNotice("Keine passende Adresse gefunden."); return }
       const position = [Number.parseFloat(result.lat), Number.parseFloat(result.lon)]
       setSearchResult({ position, label: result.display_name })
+      setFlyTarget({ position })
       setSelected(null)
       setRoute(null)
+      setQuery("") // sonst filtert der Adresstext die Liste leer
     } catch { setNotice("Suche fehlgeschlagen.") } finally { setBusy(false) }
   }
 
@@ -134,34 +126,27 @@ export default function CivixApp() {
     if (!navigator.geolocation) { setNotice("Geolocation nicht verfügbar."); return }
     navigator.geolocation.getCurrentPosition(({ coords }) => {
       const position = [coords.latitude, coords.longitude]
+      if (!BOUNDS.contains(position)) { setNotice("Dein Standort liegt außerhalb von Leipzig."); return }
       setUserPosition({ position })
-      setSearchResult({ position, label: "Mein Standort", zoom: 16 })
+      setFlyTarget({ position, zoom: 16 })
       setNotice("Standort gefunden.")
     }, () => setNotice("Standort konnte nicht ermittelt werden."), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 })
   }
 
-  const isSaved = useCallback(item => savedPlaces.some(({ id }) => id === item.id), [savedPlaces])
+  const isSaved = item => savedIds.includes(item.id)
 
   const toggleSaved = item => {
     if (isSaved(item)) {
-      setSavedPlaces(current => current.filter(({ id }) => id !== item.id))
+      setSavedIds(savedIds.filter(id => id !== item.id))
       setNotice("Aus Favoriten entfernt.")
     } else {
-      setSavedPlaces(current => [{ ...item }, ...current].slice(0, 50))
+      setSavedIds([item.id, ...savedIds])
       setNotice("Zu Favoriten hinzugefügt.")
     }
   }
 
   const handleMapClick = latlng => {
-    const clickedPosition = [latlng.lat, latlng.lng]
-    const current = userPosition
-    if (current?.label === "Kartenpunkt" && distance({ lat: current.position[0], lng: current.position[1] }, { lat: clickedPosition[0], lng: clickedPosition[1] }) < 0.02) {
-      setUserPosition(null)
-      setRoute(null)
-      setNotice("Punkt entfernt.")
-      return
-    }
-    setUserPosition({ position: clickedPosition, label: "Kartenpunkt" })
+    setUserPosition({ position: [latlng.lat, latlng.lng], label: "Kartenpunkt" })
     setNotice("Punkt gesetzt.")
   }
 
@@ -197,12 +182,13 @@ export default function CivixApp() {
       .filter(item => activeCategory === "alle" || item.category === activeCategory)
       .filter(item => !value || `${item.name} ${item.address} ${item.tags.join(" ")}`.toLowerCase().includes(value))
       .map(item => origin ? { ...item, distance: distance(origin, item) } : item)
-      .sort((a, b) => a.distance && b.distance ? a.distance - b.distance : a.name.localeCompare(b.name, "de"))
+      .sort(byDistanceThenName)
   }, [activeCategory, query, userPosition, searchResult])
 
   const select = item => {
     setSelected(item)
-    setSearchResult({ position: [item.lat, item.lng], label: item.name, zoom: 16 })
+    setRoute(null)
+    setFlyTarget({ position: [item.lat, item.lng], zoom: 16 })
   }
 
   return (
@@ -295,8 +281,7 @@ export default function CivixApp() {
           <div className="map-shell">
             <MapContainer center={LEIPZIG} zoom={12} minZoom={10} maxZoom={19} maxBounds={BOUNDS} maxBoundsViscosity={0.8} className="map" scrollWheelZoom>
               <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende' />
-              <MapReady />
-              <FlyTo target={searchResult} />
+              <FlyTo target={flyTarget} />
               <MapEvents onSelect={handleMapClick} />
               {INSTITUTIONS.map(item => (
                 <Marker key={item.id} position={[item.lat, item.lng]} icon={CATEGORY_ICONS[item.category]} eventHandlers={{ click: () => select(item) }}>
@@ -307,7 +292,7 @@ export default function CivixApp() {
               ))}
               {selected && <Marker position={[selected.lat, selected.lng]} icon={SELECTED_ICONS[selected.category] || SEARCH_ICON} zIndexOffset={1000} />}
               {userPosition && <Marker position={userPosition.position} icon={USER_ICON} eventHandlers={{ click: removeMapPin }}><Popup>{userPosition.label || "Mein Standort"}</Popup></Marker>}
-              {searchResult && !selected && <Marker position={searchResult.position} icon={SEARCH_ICON}><Popup>{searchResult.label}</Popup></Marker>}
+              {searchResult && <Marker position={searchResult.position} icon={SEARCH_ICON}><Popup>{searchResult.label}</Popup></Marker>}
               {route && <Polyline positions={route.positions} pathOptions={{ color: ROUTE_COLOR, weight: 5, opacity: 1 }} />}
             </MapContainer>
           </div>
@@ -322,7 +307,7 @@ export default function CivixApp() {
               </div>
               <div className="detail-actions">
                 <button className="btn" type="button" onClick={() => toggleSaved(selected)}>{isSaved(selected) ? "★ Entfernen" : "☆ Merken"}</button>
-                <button className="btn btn-secondary" type="button" onClick={() => { setUserPosition(current => current); navigateTo(userPosition?.position ? { lat: userPosition.position[0], lng: userPosition.position[1] } : null, { lat: selected.lat, lng: selected.lng }) }} disabled={routeBusy}>{routeBusy ? "Route…" : "Route hierher"}</button>
+                <button className="btn btn-secondary" type="button" onClick={() => navigateTo(userPosition?.position ? { lat: userPosition.position[0], lng: userPosition.position[1] } : null, { lat: selected.lat, lng: selected.lng })} disabled={routeBusy}>{routeBusy ? "Route…" : "Route hierher"}</button>
               </div>
             </section>
           ) : (
