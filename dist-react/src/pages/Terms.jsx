@@ -7,5 +7,5 @@ const SECTIONS = [
 ]
 
 export default function Terms() {
-  return <LegalPage title="Nutzungsbedingungen" intro="Diese Website ist ein privates, nicht kommerzielles Hobby-Projekt." sections={SECTIONS} />
+  return <LegalPage title="Nutzungsbedingungen" intro={<>Diese Karte ist ein Angebot von CivixX. Mehr zum Projekt auf <a href="https://www.civixx.de/">civixx.de</a>.</>} sections={SECTIONS} />
 }

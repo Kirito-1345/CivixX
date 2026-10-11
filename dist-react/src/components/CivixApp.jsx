@@ -11,7 +11,7 @@ const LEIPZIG = [51.3397, 12.3731]
 const BOUNDS = L.latLngBounds([51.12, 12.00], [51.56, 12.75])
 const STORAGE_KEY = "civixx.savedPlaces.v2"
 
-const ROUTE_COLOR = "#ff3000"
+const ROUTE_COLOR = "#2bb673"
 
 const shapeIcons = selected => Object.fromEntries(Object.entries(CATEGORIES).map(([key, { shape }]) => [key, L.divIcon({
   className: `civix-pin ${selected ? "civix-pin-selected" : "civix-pin-institution"}`,

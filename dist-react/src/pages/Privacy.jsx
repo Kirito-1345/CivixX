@@ -1,7 +1,7 @@
 import LegalPage from "../components/LegalPage.jsx"
 
 const SECTIONS = [
-  { heading: "Verantwortliche Stelle", body: "Dies ist eine private Hobby-Seite. Der Betreiber ist Julius Bruckner." },
+  { heading: "Verantwortliche Stelle", body: <>Diese Karte ist ein Angebot von CivixX (<a href="https://www.civixx.de/">www.civixx.de</a>). Der Betreiber ist Julius Bruckner.</> },
   { heading: "Datenverarbeitung auf dieser Seite", body: "Diese Website setzt keine Cookies, kein Tracking und keine Analyse-Tools ein." },
   { heading: "Adresssuche", body: "Wenn du eine Adresse suchst, wird dein Suchbegriff an den öffentlichen Dienst Nominatim der OpenStreetMap Foundation gesendet. Die Verarbeitung erfolgt zur Bereitstellung der angeforderten Funktion." },
   { heading: "Standortfunktion", body: "Die Standortabfrage erfolgt nur nach ausdrücklichem Klick auf „Standort“ über die Geolocation-API deines Browsers. Der Standort bleibt im Browser, solange du keine Route berechnest." },

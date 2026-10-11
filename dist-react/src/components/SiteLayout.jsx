@@ -41,7 +41,7 @@ export default function SiteLayout() {
       <footer className="site-footer">
         <div className="footer-main">
           <p className="footer-mark" aria-hidden="true">CivixX</p>
-          <p className="footer-note">CivixX · privates Hobby-Projekt · Kartendaten © OpenStreetMap-Mitwirkende</p>
+          <p className="footer-note">Eine Karte von <a href="https://www.civixx.de/">civixx.de</a> · Kartendaten © OpenStreetMap-Mitwirkende</p>
         </div>
         <nav aria-label="Rechtliches">
           {LEGAL.map(item => <Link key={item.to} to={item.to}>{item.label}</Link>)}

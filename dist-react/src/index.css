@@ -1,10 +1,10 @@
-/* ── Tokens: Swiss International Style ─────────────────────────────── */
+/* ── Tokens: Swiss International Style, Farben nach civixx.de (Grün/Weiß) */
 :root {
   --bg: #fff;
-  --fg: #000;
-  --muted: #f2f2f2;
-  --accent: #ff3000;
-  --accent-ink: #d92800; /* Akzent für kleine Schrift auf Weiß (4,9:1) */
+  --fg: #0b3b2c; /* Tiefgrün statt Schwarz */
+  --muted: #eef6f1;
+  --accent: #2bb673; /* Tiefgrün darauf: 4,8:1 */
+  --accent-ink: #007a3d; /* Akzent für kleine Schrift auf Weiß (5,5:1) */
   --rule: 2px;
   --rule-heavy: 4px;
   --gutter: clamp(24px, 4vw, 48px);
@@ -26,9 +26,9 @@ h1, h2, p, dl, dd, ul { margin: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Muster: Tiefe ohne Schatten ───────────────────────────────────── */
-.swiss-grid-pattern { background-image: linear-gradient(rgba(0,0,0,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.06) 1px, transparent 1px); background-size: 24px 24px; }
-.swiss-dots { background-image: radial-gradient(rgba(0,0,0,.16) 1px, transparent 1px); background-size: 16px 16px; }
-.swiss-diagonal { background-image: repeating-linear-gradient(45deg, rgba(0,0,0,.06) 0 1px, transparent 1px 10px); }
+.swiss-grid-pattern { background-image: linear-gradient(rgba(11,59,44,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(11,59,44,.06) 1px, transparent 1px); background-size: 24px 24px; }
+.swiss-dots { background-image: radial-gradient(rgba(11,59,44,.16) 1px, transparent 1px); background-size: 16px 16px; }
+.swiss-diagonal { background-image: repeating-linear-gradient(45deg, rgba(11,59,44,.06) 0 1px, transparent 1px 10px); }
 
 /* ── Primitive ─────────────────────────────────────────────────────── */
 .eyebrow, .section-label { font-size: 11px; font-weight: 700; line-height: 1.2; letter-spacing: var(--track-label); text-transform: uppercase; }
@@ -87,7 +87,7 @@ main { flex: 1; width: 100%; }
 
 .composition { position: relative; height: 88px; overflow: hidden; border-bottom: var(--rule) solid var(--fg); background-color: var(--muted); }
 .composition span { position: absolute; }
-.composition-circle { left: 24px; top: 18px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 8px rgba(255,48,0,.1); }
+.composition-circle { left: 24px; top: 18px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 8px rgba(43,182,115,.1); }
 .composition-square { left: 58px; top: 36px; width: 36px; height: 36px; background: var(--fg); }
 .composition-bar { left: 118px; right: 0; top: 52px; height: var(--rule-heavy); background: var(--fg); }
 .composition-frame { right: 24px; top: 14px; width: 28px; height: 28px; border: var(--rule-heavy) solid var(--fg); }
@@ -171,7 +171,7 @@ main { flex: 1; width: 100%; }
 .civix-pin svg { display: block; width: 100%; height: 100%; overflow: visible; fill: var(--fg); stroke: var(--bg); stroke-width: 2.5; paint-order: stroke; }
 .civix-pin-selected svg { fill: var(--accent); stroke: var(--fg); stroke-width: 2; }
 .civix-pin span { display: block; width: 100%; height: 100%; border-radius: 50%; }
-.civix-pin-search span { border: 3px solid var(--fg); background: var(--accent); box-shadow: 0 0 0 8px rgba(255,48,0,.18); }
+.civix-pin-search span { border: 3px solid var(--fg); background: var(--accent); box-shadow: 0 0 0 8px rgba(43,182,115,.18); }
 .civix-pin-user span { border: 5px solid var(--fg); background: var(--bg); }
 
 /* ── Rechtstexte ───────────────────────────────────────────────────── */

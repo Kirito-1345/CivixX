@@ -31,7 +31,7 @@ flowchart LR
 | Gemeinsames Seitenlayout | `dist-react/src/components/SiteLayout.jsx` | Header, Navigation, Footer und Rahmen für React-Seiten |
 | UI-Bausteine | `dist-react/src/components/LegalPage.jsx`, `SectionLabel.jsx`, `CategoryShape.jsx` | Gemeinsames Layout der Rechtstexte, nummerierte Abschnittslabels und Kategorie-Formen (Liste, Filter, Kartenmarker) |
 | Rechtliche React-Seiten | `dist-react/src/pages/Privacy.jsx`, `dist-react/src/pages/Cookies.jsx`, `dist-react/src/pages/Terms.jsx` | Datenschutz, Cookie-Hinweise und Nutzungsbedingungen |
-| Darstellung | `dist-react/src/index.css` | Design-Tokens (Swiss Style: Schwarz/Weiß/Grau, Akzent `#FF3000`, keine Radien/Schatten), Muster-Klassen, Primitive (`.btn`, `.section-label`) sowie Layout- und Karten-Styles |
+| Darstellung | `dist-react/src/index.css` | Design-Tokens (Swiss Style in den Farben von civixx.de: Tiefgrün `#0B3B2C`/Weiß/Hellgrün, Akzent `#2BB673`, keine Radien/Schatten), Muster-Klassen, Primitive (`.btn`, `.section-label`) sowie Layout- und Karten-Styles |
 | Build-Konfiguration | `dist-react/vite.config.js`, `dist-react/package.json` | Vite-Konfiguration, Skripte und Abhängigkeiten |
 
 ## Hauptabläufe
@@ -113,7 +113,7 @@ Zusätzlich sind `npm run lint` (Oxlint) und `npm test` (Node-Testrunner, `src/g
 ## Orientierung für Änderungen
 
 - UI und Nutzerabläufe: `dist-react/src/components/CivixApp.jsx`
-- Kategorien: `dist-react/src/data/institutions.js` – jede Kategorie hat eine Form (`shape`, SVG-Pfad) statt einer Farbe; Rot ist für Auswahl und Route reserviert
+- Kategorien: `dist-react/src/data/institutions.js` – jede Kategorie hat eine Form (`shape`, SVG-Pfad) statt einer Farbe; der Akzent (Grün) ist für Auswahl und Route reserviert
 - Kartenregion oder Startansicht: Konstanten `LEIPZIG` und `BOUNDS` in `CivixApp.jsx`
 - Local Storage-Verhalten: `dist-react/src/hooks/useLocalStorage.js`
 - Routing und 404: `dist-react/src/App.jsx`
