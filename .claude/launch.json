@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "civixx",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "dist-react", "run", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "civixx-legacy",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["-e", "const h=require('http'),f=require('fs'),p=require('path');const t={'.html':'text/html; charset=utf-8','.css':'text/css'};h.createServer((q,r)=>{const n=p.basename(q.url.split('?')[0])||'index.html';f.readFile(n,(e,d)=>{if(e||!t[p.extname(n)]){r.writeHead(404);return r.end()}r.writeHead(200,{'Content-Type':t[p.extname(n)]});r.end(d)})}).listen(8000,'127.0.0.1')"],
+      "port": 8000
+    }
+  ]
+}
