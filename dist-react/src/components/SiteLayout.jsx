@@ -33,7 +33,7 @@ export default function SiteLayout() {
         </Link>
         <nav className="header-nav" aria-label="Hauptnavigation">
           {NAV.map(item => (
-            <NavLink key={item.to} className="nav-link" to={item.to} data-label={item.label} end><span>{item.label}</span></NavLink>
+            <NavLink key={item.to} className="nav-link" to={item.to} end>{item.label}</NavLink>
           ))}
         </nav>
       </header>
