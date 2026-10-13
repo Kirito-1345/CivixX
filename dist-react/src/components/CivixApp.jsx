@@ -279,7 +279,7 @@ export default function CivixApp() {
             </ul>
           </div>
           <div className="map-shell">
-            <MapContainer center={LEIPZIG} zoom={12} minZoom={10} maxZoom={19} maxBounds={BOUNDS} maxBoundsViscosity={0.8} className="map" scrollWheelZoom>
+            <MapContainer center={LEIPZIG} zoom={12} minZoom={10} maxZoom={18} maxBounds={BOUNDS} maxBoundsViscosity={0.8} className="map" scrollWheelZoom zoomSnap={0.25} zoomDelta={0.5} wheelPxPerZoomLevel={180}>
               <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende' />
               <FlyTo target={flyTarget} />
               <MapEvents onSelect={handleMapClick} />
