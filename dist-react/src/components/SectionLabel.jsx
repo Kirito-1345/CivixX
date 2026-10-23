@@ -1,6 +1,6 @@
-export default function SectionLabel({ no, children }) {
+export default function SectionLabel({ id, no, children }) {
   return (
-    <h2 className="section-label">
+    <h2 id={id} className="section-label">
       <span className="section-label-no">{no}.</span>
       {children}
     </h2>

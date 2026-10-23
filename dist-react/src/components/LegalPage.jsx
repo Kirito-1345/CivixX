@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom"
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js"
 
 export default function LegalPage({ label = "Rechtliches", title, intro, sections = [], children }) {
+  useDocumentTitle(`${title} – CivixX`)
   return (
-    <main className="legal-page">
+    <div className="legal-page">
       <header className="legal-head">
         <p className="eyebrow">{label}</p>
         <h1>{title}</h1>
@@ -10,7 +12,7 @@ export default function LegalPage({ label = "Rechtliches", title, intro, section
       <div className="legal-body">
         <aside className="legal-aside swiss-dots">
           <p className="legal-intro">{intro}</p>
-          <Link className="btn btn-secondary" to="/">← Zur Karte</Link>
+          <Link className="btn btn-secondary" to="/"><span aria-hidden="true">←</span> Zur Karte</Link>
         </aside>
         <article className="legal-sections">
           {sections.map(({ heading, body }, index) => (
@@ -23,6 +25,6 @@ export default function LegalPage({ label = "Rechtliches", title, intro, section
           {children}
         </article>
       </div>
-    </main>
+    </div>
   )
 }

@@ -1,3 +1,4 @@
+import ExternalLink from "../components/ExternalLink.jsx"
 import LegalPage from "../components/LegalPage.jsx"
 
 const SECTIONS = [
@@ -7,5 +8,5 @@ const SECTIONS = [
 ]
 
 export default function Terms() {
-  return <LegalPage title="Nutzungsbedingungen" intro={<>Diese Karte ist ein Angebot von CivixX. Mehr zum Projekt auf <a href="https://www.civixx.de/">civixx.de</a>.</>} sections={SECTIONS} />
+  return <LegalPage title="Nutzungsbedingungen" intro={<>Diese Karte ist ein Angebot von CivixX. Mehr zum Projekt auf <ExternalLink href="https://www.civixx.de/" translate="no">civixx.de</ExternalLink>.</>} sections={SECTIONS} />
 }

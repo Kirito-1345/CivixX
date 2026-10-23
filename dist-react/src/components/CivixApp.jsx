@@ -1,202 +1,281 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet"
-import L from "leaflet"
-import { useLocalStorage } from "../hooks/useLocalStorage.js"
+import { lazy, Suspense, useEffect, useEffectEvent, useRef, useState } from "react"
+import { useSearchParams } from "react-router-dom"
+import { useStoredState } from "../hooks/useStoredState.js"
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion.js"
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js"
 import { CATEGORIES, INSTITUTIONS } from "../data/institutions.js"
-import { byDistanceThenName, distance } from "../geo.js"
+import { FAVORITES } from "../data/favorites.js"
+import { inArea, LEIPZIG } from "../lib/area.js"
+import { indexPlaces, selectPlaces } from "../lib/places.js"
+import { parseUrlState, serializeUrlState } from "../lib/urlState.js"
+import { fetchRoute, geocode } from "../lib/services.js"
+import { geoMessages, routeMessages, searchMessages } from "../lib/messages.js"
+import { formatCount, formatDistance, formatDuration } from "../utils/format.js"
+import CategoryFilter from "./CategoryFilter.jsx"
 import CategoryShape from "./CategoryShape.jsx"
+import MapErrorBoundary from "./MapErrorBoundary.jsx"
+import PlaceList from "./PlaceList.jsx"
 import SectionLabel from "./SectionLabel.jsx"
 
-const LEIPZIG = [51.3397, 12.3731]
-const BOUNDS = L.latLngBounds([51.12, 12.00], [51.56, 12.75])
-const STORAGE_KEY = "civixx.savedPlaces.v2"
+// Leaflet (~150 kB) erst laden, wenn die Karte gebraucht wird.
+const MapView = lazy(() => import("./MapView.jsx"))
 
-const ROUTE_COLOR = "#2bb673"
+const PLACE_INDEX = indexPlaces(INSTITUTIONS)
+const BY_ID = new Map(INSTITUTIONS.map(item => [item.id, item]))
+const URL_CONTEXT = { categories: Object.keys(CATEGORIES), placeIds: new Set(BY_ID.keys()) }
+const DEFAULT_TITLE = "CivixX – Bildungseinrichtungen in Leipzig"
 
-const shapeIcons = selected => Object.fromEntries(Object.entries(CATEGORIES).map(([key, { shape }]) => [key, L.divIcon({
-  className: `civix-pin ${selected ? "civix-pin-selected" : "civix-pin-institution"}`,
-  html: `<svg viewBox="0 0 16 16"><path d="${shape}"/></svg>`,
-  iconSize: selected ? [30, 30] : [20, 20],
-  iconAnchor: selected ? [15, 15] : [10, 10]
-})]))
-
-const CATEGORY_ICONS = shapeIcons(false)
-const SELECTED_ICONS = shapeIcons(true)
-
-const SEARCH_ICON = L.divIcon({
-  className: "civix-pin civix-pin-search",
-  html: "<span></span>",
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
-})
-
-const USER_ICON = L.divIcon({
-  className: "civix-pin civix-pin-user",
-  html: "<span></span>",
-  iconSize: [20, 20],
-  iconAnchor: [10, 10]
-})
-
-function FlyTo({ target }) {
-  const map = useMap()
-  useEffect(() => {
-    if (target) map.flyTo(target.position, target.zoom || 15, { duration: 1.2 })
-  }, [map, target])
-  return null
+const STORAGE_NOTES = {
+  corrupt: "Gespeicherte Favoriten waren unlesbar. Eine Sicherung liegt im Browser unter „civixx.favorites.backup“; neue Favoriten werden normal gespeichert.",
+  newer: "Deine Favoriten stammen aus einer neueren Version von CivixX. Seite neu laden, um sie zu sehen und zu ändern.",
+  unavailable: "Dein Browser blockiert den lokalen Speicher. Favoriten gelten nur bis zum Schließen der Seite."
 }
 
-function MapEvents({ onSelect }) {
-  useMapEvents({ click: event => onSelect(event.latlng) })
-  return null
+function useNotice() {
+  const [notice, setNotice] = useState(null)
+  const [held, setHeld] = useState(false) // Fokus im Statusbereich: nicht wegblenden, solange jemand den Button bedient
+
+  useEffect(() => {
+    if (!notice || held) return
+    const timer = setTimeout(() => setNotice(null), notice.action ? 10000 : 5000)
+    return () => clearTimeout(timer)
+  }, [notice, held])
+
+  const notify = (text, tone = "info", action = null) => {
+    setHeld(false)
+    setNotice({ text, tone, action })
+  }
+  return { notice, notify, clear: () => setNotice(null), hold: setHeld }
 }
 
 export default function CivixApp() {
-  const [query, setQuery] = useState("")
-  const [searchResult, setSearchResult] = useState(null)
-  const [flyTarget, setFlyTarget] = useState(null)
-  const [userPosition, setUserPosition] = useState(null)
-  const [route, setRoute] = useState(null)
-  const [routeBusy, setRouteBusy] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState("")
-  const [activeCategory, setActiveCategory] = useState("alle")
-  const [selected, setSelected] = useState(null)
-  const [stored, setSavedIds] = useLocalStorage(STORAGE_KEY, [])
-  // Ältere Versionen speicherten ganze Einträge statt IDs.
-  const savedIds = stored.map(entry => entry?.id ?? entry)
-  const savedPlaces = savedIds.map(id => INSTITUTIONS.find(item => item.id === id)).filter(Boolean)
-  const cacheRef = useRef(new Map())
+  const [searchParams, setSearchParams] = useSearchParams()
+  const url = parseUrlState(searchParams, URL_CONTEXT)
+  const selected = url.placeId ? BY_ID.get(url.placeId) : null
+  const reducedMotion = usePrefersReducedMotion()
+  const { notice, notify, clear, hold } = useNotice()
+  const [geo, setGeo] = useState({ status: "idle", position: null })
+  const [recenter, setRecenter] = useState(0)
+  const [savedIds, setSavedIds, storageStatus] = useStoredState(FAVORITES)
+  const inputRef = useRef(null)
+  const statusRef = useRef(null)
+  const lastView = useRef(null)
 
+  // Async-Antworten bauen auf der aktuellen URL auf, nicht auf der beim Start des Requests.
+  const latestParams = useRef(searchParams)
+  useEffect(() => { latestParams.current = searchParams }, [searchParams])
+
+  const commit = (changes, { replace = false } = {}) => {
+    const current = latestParams.current
+    const next = serializeUrlState({ ...parseUrlState(current, URL_CONTEXT), ...changes })
+    if (next.toString() === current.toString()) return
+    latestParams.current = next
+    setSearchParams(next, { replace, preventScrollReset: true })
+  }
+
+  // Startpunkt: gesetzter Kartenpunkt (teilbar, in der URL) oder eigener Standort (nur lokal).
+  const start = url.start ? { ...url.start, label: "Kartenpunkt" } : geo.position ? { ...geo.position, label: "Mein Standort" } : null
+  const routeActive = url.route && Boolean(start)
+
+  // Ungültige oder überholte Parameter (unbekannte Kategorie/ID, Route ohne Start) still bereinigen.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("civixx.geocodeCache")
-      const parsed = raw ? JSON.parse(raw) : {}
-      Object.entries(parsed).forEach(([key, value]) => {
-        if (value?.expires > Date.now()) cacheRef.current.set(key, value)
-      })
-    } catch { /* Speicher nicht verfügbar */ }
-  }, [])
-
-  useEffect(() => {
-    if (!notice) return
-    const timer = setTimeout(() => setNotice(""), 5000)
-    return () => clearTimeout(timer)
-  }, [notice])
-
-  const geocode = useCallback(async address => {
-    const url = new URL("https://nominatim.openstreetmap.org/search")
-    url.searchParams.set("q", `${address}, Leipzig`)
-    url.searchParams.set("format", "jsonv2")
-    url.searchParams.set("limit", "1")
-    url.searchParams.set("countrycodes", "de")
-    url.searchParams.set("viewbox", `${BOUNDS.getWest()},${BOUNDS.getNorth()},${BOUNDS.getEast()},${BOUNDS.getSouth()}`)
-    url.searchParams.set("bounded", "1")
-    const cacheKey = url.searchParams.toString()
-    const cached = cacheRef.current.get(cacheKey)
-    if (cached?.expires > Date.now()) return cached.result
-
-    const response = await fetch(url)
-    if (!response.ok) throw new Error("network")
-    const [result] = await response.json()
-    if (result) {
-      cacheRef.current.set(cacheKey, { result, expires: Date.now() + 86400000 })
-      try { localStorage.setItem("civixx.geocodeCache", JSON.stringify(Object.fromEntries(cacheRef.current))) } catch { /* voll */ }
+    const normalized = serializeUrlState({ ...url, route: routeActive })
+    if (normalized.toString() !== searchParams.toString()) {
+      latestParams.current = normalized
+      setSearchParams(normalized, { replace: true, preventScrollReset: true })
     }
-    return result || null
-  }, [])
+  })
 
-  const search = async event => {
-    event.preventDefault()
-    const value = query.trim()
-    if (!value) return
-    setBusy(true)
+  useDocumentTitle(selected ? `${selected.name} – CivixX` : DEFAULT_TITLE)
+
+  // ── Suche: getippter Text filtert die Liste, abgeschickter Text wird geocodiert ──
+  const submittedQuery = url.search?.query ?? ""
+  const [draft, setDraft] = useState(submittedQuery)
+  const [syncedQuery, setSyncedQuery] = useState(submittedQuery)
+  if (syncedQuery !== submittedQuery) { // Back/Forward oder Zurücksetzen übernimmt den Suchtext
+    setSyncedQuery(submittedQuery)
+    setDraft(submittedQuery)
+  }
+  const listText = draft.trim() === submittedQuery ? "" : draft
+  const [searching, setSearching] = useState(false)
+  const searchController = useRef(null)
+
+  const runSearch = async (query, { replace }) => {
+    searchController.current?.abort()
+    const controller = new AbortController()
+    searchController.current = controller
+    setSearching(true)
     try {
-      const result = await geocode(value)
-      if (!result) { setNotice("Keine passende Adresse gefunden."); return }
-      const position = [Number.parseFloat(result.lat), Number.parseFloat(result.lon)]
-      setSearchResult({ position, label: result.display_name })
-      setFlyTarget({ position })
-      setSelected(null)
-      setRoute(null)
-      setQuery("") // sonst filtert der Adresstext die Liste leer
-    } catch { setNotice("Suche fehlgeschlagen.") } finally { setBusy(false) }
+      const position = await geocode(query, { signal: controller.signal })
+      if (!position) {
+        notify(searchMessages.notFound(query), "error")
+        if (replace) commit({ search: null }, { replace: true })
+        return
+      }
+      commit({ search: { query, position }, placeId: null, route: false, view: null }, { replace })
+      notify(searchMessages.found, "success")
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      notify(searchMessages.error(error), "error", { label: "Erneut suchen", run: () => runSearch(query, { replace }) })
+    } finally {
+      if (searchController.current === controller) {
+        searchController.current = null
+        setSearching(false)
+      }
+    }
   }
 
+  // Deep-Link mit ?suche= aber ohne aufgelösten Punkt: einmal nachschlagen (Cache zuerst).
+  const resolveLinkedSearch = useEffectEvent(query => runSearch(query, { replace: true }))
+  const pendingQuery = url.search && !url.search.position ? url.search.query : null
+  useEffect(() => {
+    if (!pendingQuery) return
+    resolveLinkedSearch(pendingQuery)
+    return () => searchController.current?.abort()
+  }, [pendingQuery])
+
+  const submitSearch = event => {
+    event.preventDefault()
+    const query = draft.trim()
+    if (!query) {
+      notify(searchMessages.empty, "error")
+      inputRef.current?.focus()
+      return
+    }
+    if (query === url.search?.query && url.search.position) { // schon aufgelöst: kein neuer Request
+      commit({ placeId: null, route: false, view: null })
+      setRecenter(count => count + 1)
+      return
+    }
+    runSearch(query, { replace: false })
+  }
+
+  const clearSearch = () => {
+    commit({ search: null })
+    inputRef.current?.focus()
+  }
+
+  // ── Standort ──
   const locate = () => {
-    if (!navigator.geolocation) { setNotice("Geolocation nicht verfügbar."); return }
+    if (!navigator.geolocation) { notify(geoMessages.unsupported, "error"); return }
+    setGeo(current => ({ ...current, status: "loading" }))
     navigator.geolocation.getCurrentPosition(({ coords }) => {
-      const position = [coords.latitude, coords.longitude]
-      if (!BOUNDS.contains(position)) { setNotice("Dein Standort liegt außerhalb von Leipzig."); return }
-      setUserPosition({ position })
-      setFlyTarget({ position, zoom: 16 })
-      setNotice("Standort gefunden.")
-    }, () => setNotice("Standort konnte nicht ermittelt werden."), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 })
+      const position = { lat: coords.latitude, lng: coords.longitude }
+      if (!inArea(position)) {
+        setGeo({ status: "error", position: null })
+        notify(geoMessages.outside, "error")
+        return
+      }
+      setGeo({ status: "success", position })
+      setRecenter(count => count + 1)
+      commit({ start: null, route: false, view: null })
+      notify(geoMessages.found, "success")
+    }, error => {
+      setGeo(current => ({ ...current, status: "error" }))
+      notify(geoMessages.error(error), "error", { label: "Erneut versuchen", run: locate })
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 })
   }
 
-  const isSaved = item => savedIds.includes(item.id)
+  const setStartPoint = point => {
+    setGeo({ status: "idle", position: null })
+    commit({ start: point, route: false })
+    notify("Startpunkt gesetzt. „Route hierher“ berechnet den Weg zur Auswahl.", "success")
+  }
+
+  const startAtMapCenter = () => {
+    const center = lastView.current ?? url.view ?? LEIPZIG
+    setStartPoint({ lat: center.lat, lng: center.lng })
+  }
+
+  const removeStart = () => {
+    commit({ start: null, route: false })
+    notify("Startpunkt entfernt.")
+  }
+
+  // ── Route: aus URL abgeleitet, damit Reload und Back/Forward sie wiederherstellen ──
+  const [routeAttempt, setRouteAttempt] = useState(0)
+  const routeKey = routeActive && selected ? `${start.lat},${start.lng}>${selected.id}#${routeAttempt}` : null
+  const [routeState, setRouteState] = useState({ key: null, status: "idle" })
+  // Solange zur aktuellen Route kein Ergebnis vorliegt, lädt sie.
+  const route = !routeKey ? { status: "idle" } : routeState.key === routeKey ? routeState : { status: "loading" }
+
+  const loadRoute = useEffectEvent((key, signal) => {
+    fetchRoute(start, selected, { signal }).then(result => {
+      setRouteState({ key, status: "success", ...result })
+      notify(`Route erstellt: ${formatDistance(result.distance)} · ca. ${formatDuration(result.duration)}`, "success")
+    }, error => {
+      if (error?.name === "AbortError") return
+      setRouteState({ key, status: "error" })
+      notify(routeMessages.error(error), "error", { label: "Erneut versuchen", run: () => setRouteAttempt(count => count + 1) })
+    })
+  })
+
+  useEffect(() => {
+    if (!routeKey) return
+    const controller = new AbortController()
+    loadRoute(routeKey, controller.signal)
+    return () => controller.abort()
+  }, [routeKey])
+
+  const requestRoute = () => {
+    if (!start) { notify(routeMessages.noStart, "error"); return }
+    if (url.route && route.status === "error") setRouteAttempt(count => count + 1)
+    commit({ route: true })
+  }
+
+  // ── Favoriten ──
+  const savedPlaces = savedIds.map(id => BY_ID.get(id)).filter(Boolean)
+  const selectedSaved = Boolean(selected) && savedIds.includes(selected.id)
 
   const toggleSaved = item => {
-    if (isSaved(item)) {
-      setSavedIds(savedIds.filter(id => id !== item.id))
-      setNotice("Aus Favoriten entfernt.")
-    } else {
-      setSavedIds([item.id, ...savedIds])
-      setNotice("Zu Favoriten hinzugefügt.")
+    const index = savedIds.indexOf(item.id)
+    if (index === -1) {
+      setSavedIds(ids => [item.id, ...ids.filter(id => id !== item.id)])
+      notify(`„${item.name}“ gemerkt.`, "success")
+      return
     }
+    setSavedIds(ids => ids.filter(id => id !== item.id))
+    notify(`„${item.name}“ aus Favoriten entfernt.`, "info", {
+      label: "Rückgängig",
+      run: () => {
+        setSavedIds(ids => ids.includes(item.id) ? ids : [...ids.slice(0, index), item.id, ...ids.slice(index)])
+        notify(`„${item.name}“ wiederhergestellt.`, "success")
+      }
+    })
   }
 
-  const handleMapClick = latlng => {
-    setUserPosition({ position: [latlng.lat, latlng.lng], label: "Kartenpunkt" })
-    setNotice("Punkt gesetzt.")
+  // ── Liste und Karte teilen sich dieselbe Auswahl ──
+  const origin = start ?? url.search?.position ?? null
+  const places = selectPlaces(PLACE_INDEX, { category: url.category, text: listText, origin })
+  const placeHref = item => `?${serializeUrlState({ ...url, placeId: item.id, route: false, view: null })}`
+  const selectPlace = item => commit({ placeId: item.id, route: false, view: null })
+
+  const baseTarget = selected ? { lat: selected.lat, lng: selected.lng, zoom: 16, key: `ort:${selected.id}` }
+    : url.search?.position ? { ...url.search.position, zoom: 15, key: `suche:${url.search.query}` }
+    : geo.position ? { ...geo.position, zoom: 15, key: "standort" }
+    : null
+  const target = baseTarget && { ...baseTarget, key: `${baseTarget.key}#${recenter}` }
+
+  const onViewChange = view => {
+    lastView.current = view
+    commit({ view }, { replace: true })
   }
 
-  const removeMapPin = () => {
-    if (userPosition?.label !== "Kartenpunkt") return
-    setUserPosition(null)
-    setRoute(null)
-    setNotice("Punkt entfernt.")
+  const runNoticeAction = () => {
+    const { run } = notice.action
+    clear()
+    statusRef.current?.focus()
+    run()
   }
 
-  const navigateTo = async (start, destination) => {
-    if (!start || !destination) { setNotice("Start und Ziel wählen."); return }
-    setRouteBusy(true)
-    try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`
-      const response = await fetch(url)
-      if (!response.ok) throw new Error("network")
-      const data = await response.json()
-      if (data.code !== "Ok" || !data.routes?.length) { setNotice("Keine Route gefunden."); return }
-      setRoute({
-        positions: data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]),
-        start, destination
-      })
-      setNotice("Route erstellt.")
-    } catch { setNotice("Routenberechnung fehlgeschlagen.") } finally { setRouteBusy(false) }
-  }
-
-  const institutions = useMemo(() => {
-    const value = query.trim().toLowerCase()
-    const [lat, lng] = userPosition?.position || searchResult?.position || []
-    const origin = lat === undefined ? null : { lat, lng }
-    return INSTITUTIONS
-      .filter(item => activeCategory === "alle" || item.category === activeCategory)
-      .filter(item => !value || `${item.name} ${item.address} ${item.tags.join(" ")}`.toLowerCase().includes(value))
-      .map(item => origin ? { ...item, distance: distance(origin, item) } : item)
-      .sort(byDistanceThenName)
-  }, [activeCategory, query, userPosition, searchResult])
-
-  const select = item => {
-    setSelected(item)
-    setRoute(null)
-    setFlyTarget({ position: [item.lat, item.lng], zoom: 16 })
-  }
+  const busyLabel = text => <><span className="spinner" aria-hidden="true" />{text}</>
 
   return (
-    <main className="app-main">
-      <section className="masthead">
+    <div className="app-main">
+      <section className="masthead" aria-labelledby="masthead-title">
         <div className="masthead-main">
           <p className="eyebrow">Bildung vor Ort</p>
-          <h1>Bildung in Leipzig entdecken<span>.</span></h1>
+          <h1 id="masthead-title">Bildung in Leipzig entdecken<span aria-hidden="true">.</span></h1>
         </div>
         <div className="masthead-aside">
           <div className="composition swiss-grid-pattern" aria-hidden="true">
@@ -215,109 +294,106 @@ export default function CivixApp() {
       </section>
 
       <div className="workspace">
-        <aside className="sidebar">
-          <section className="panel">
-            <div className="panel-head"><SectionLabel no="01">Suche</SectionLabel></div>
-            <form className="search-panel" onSubmit={search}>
-              <label className="sr-only" htmlFor="address">Adresse suchen</label>
-              <input id="address" value={query} onChange={event => setQuery(event.target.value)} placeholder="Adresse oder Einrichtung suchen" />
-              <button className="btn" type="submit" disabled={busy || !query.trim()}>{busy ? "Suche…" : "Suchen"}</button>
-              <button className="btn btn-secondary" type="button" onClick={locate}>Standort</button>
+        <div className="sidebar">
+          <section className="panel" aria-labelledby="panel-suche">
+            <div className="panel-head"><SectionLabel id="panel-suche" no="01">Suche</SectionLabel></div>
+            <form className="search-panel" role="search" onSubmit={submitSearch} noValidate>
+              <label className="sr-only" htmlFor="suche">Adresse oder Einrichtung</label>
+              <input ref={inputRef} id="suche" name="suche" type="search" value={draft} onChange={event => setDraft(event.target.value)}
+                autoComplete="street-address" enterKeyHint="search" spellCheck={false}
+                placeholder="z. B. Augustusplatz 10 oder HTWK…" aria-describedby="suche-hinweis" />
+              <button className="btn" type="submit" disabled={searching}>{searching ? busyLabel("Suche…") : "Suchen"}</button>
+              <button className="btn btn-secondary" type="button" onClick={locate} disabled={geo.status === "loading"}>{geo.status === "loading" ? busyLabel("Standort…") : "Standort"}</button>
             </form>
+            {url.search ? (
+              <p id="suche-hinweis" className="search-note">
+                <span>Aktive Suche: <strong>{url.search.query}</strong></span>
+                <button className="text-button" type="button" onClick={clearSearch}>Zurücksetzen</button>
+              </p>
+            ) : (
+              <p id="suche-hinweis" className="search-note">Tippen filtert die Liste. „Suchen“ zeigt die Adresse auf der Karte.</p>
+            )}
           </section>
 
-          <section className="panel">
+          <section className="panel" aria-labelledby="panel-einrichtungen">
             <div className="panel-head">
-              <SectionLabel no="02">Einrichtungen</SectionLabel>
-              <span className="panel-count">{String(institutions.length).padStart(2, "0")}</span>
+              <SectionLabel id="panel-einrichtungen" no="02">Einrichtungen</SectionLabel>
+              <span className="panel-count" aria-label={`${places.length} Treffer`}>{formatCount(places.length)}</span>
             </div>
-            <div className="category-filter">
-              {Object.entries(CATEGORIES).map(([key, { label }]) => (
-                <button key={key} type="button" aria-pressed={activeCategory === key} onClick={() => setActiveCategory(key)}><CategoryShape category={key} />{label}</button>
-              ))}
-              <button type="button" aria-pressed={activeCategory === "alle"} onClick={() => setActiveCategory("alle")}>Alle</button>
-            </div>
-            <div className="place-list result-list">
-              {institutions.map(item => (
-                <button key={item.id} type="button" className="place-row" aria-current={selected?.id === item.id ? "true" : undefined} onClick={() => select(item)}>
-                  <CategoryShape category={item.category} />
-                  <span>
-                    <strong>{item.name}</strong>
-                    <small>{item.address}</small>
-                  </span>
-                  {item.distance !== undefined && <em>{item.distance.toFixed(1)} km</em>}
-                </button>
-              ))}
-              {!institutions.length && <p className="empty">Keine Treffer. Andere Kategorie oder Suchbegriff ausprobieren.</p>}
-            </div>
+            <CategoryFilter value={url.category} onChange={category => commit({ category }, { replace: true })} />
+            <PlaceList items={places} selectedId={selected?.id} hrefFor={placeHref} className="result-list" label="Einrichtungen"
+              empty={listText ? `Keine Einrichtung passt zu „${listText.trim()}“. Mit „Suchen“ die Adresse auf der Karte finden.` : "Keine Treffer. Andere Kategorie wählen."} />
           </section>
 
-          <section className="panel">
+          <section className="panel" aria-labelledby="panel-favoriten">
             <div className="panel-head">
-              <SectionLabel no="03">Favoriten</SectionLabel>
-              <span className="panel-count">{String(savedPlaces.length).padStart(2, "0")}</span>
+              <SectionLabel id="panel-favoriten" no="03">Favoriten</SectionLabel>
+              <span className="panel-count" aria-label={`${savedPlaces.length} Favoriten`}>{formatCount(savedPlaces.length)}</span>
             </div>
-            <div className="place-list saved-list">
-              {savedPlaces.map(item => (
-                <button key={item.id} type="button" className="place-row" aria-current={selected?.id === item.id ? "true" : undefined} onClick={() => select(item)}>
-                  <CategoryShape category={item.category} />
-                  <strong>{item.name}</strong>
-                </button>
-              ))}
-              {!savedPlaces.length && <p className="empty">Noch keine Favoriten.</p>}
-            </div>
+            {STORAGE_NOTES[storageStatus] && <p className="panel-note">{STORAGE_NOTES[storageStatus]}</p>}
+            <PlaceList items={savedPlaces} selectedId={selected?.id} hrefFor={placeHref} className="saved-list" label="Favoriten" compact
+              empty="Noch keine Favoriten. Einrichtung wählen und „Merken“ drücken." />
           </section>
-        </aside>
+        </div>
 
-        <section className="map-stack">
+        <section className="map-stack" aria-labelledby="panel-karte">
           <div className="map-head swiss-dots">
-            <SectionLabel no="04">Karte</SectionLabel>
+            <SectionLabel id="panel-karte" no="04">Karte</SectionLabel>
             <ul className="map-key" aria-label="Legende">
               <li><span className="key-selected" aria-hidden="true" />Auswahl</li>
-              <li><span className="key-user" aria-hidden="true" />Standort</li>
+              <li><span className="key-user" aria-hidden="true" />Startpunkt</li>
               <li><span className="key-route" aria-hidden="true" />Route</li>
             </ul>
           </div>
           <div className="map-shell">
-            <MapContainer center={LEIPZIG} zoom={12} minZoom={10} maxZoom={18} maxBounds={BOUNDS} maxBoundsViscosity={0.8} className="map" scrollWheelZoom zoomSnap={0.25} zoomDelta={0.5} wheelPxPerZoomLevel={180}>
-              <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende' />
-              <FlyTo target={flyTarget} />
-              <MapEvents onSelect={handleMapClick} />
-              {INSTITUTIONS.map(item => (
-                <Marker key={item.id} position={[item.lat, item.lng]} icon={CATEGORY_ICONS[item.category]} eventHandlers={{ click: () => select(item) }}>
-                  <Popup>
-                    <strong>{item.name}</strong><br />{item.address}
-                  </Popup>
-                </Marker>
-              ))}
-              {selected && <Marker position={[selected.lat, selected.lng]} icon={SELECTED_ICONS[selected.category] || SEARCH_ICON} zIndexOffset={1000} />}
-              {userPosition && <Marker position={userPosition.position} icon={USER_ICON} eventHandlers={{ click: removeMapPin }}><Popup>{userPosition.label || "Mein Standort"}</Popup></Marker>}
-              {searchResult && <Marker position={searchResult.position} icon={SEARCH_ICON}><Popup>{searchResult.label}</Popup></Marker>}
-              {route && <Polyline positions={route.positions} pathOptions={{ color: ROUTE_COLOR, weight: 5, opacity: 1 }} />}
-            </MapContainer>
+            <MapErrorBoundary>
+              <Suspense fallback={<div className="map map-fallback swiss-diagonal"><p>Karte wird geladen…</p></div>}>
+                <MapView places={places} selected={selected} search={url.search} start={start}
+                  route={route.status === "success" ? route : null} view={url.view} target={target} reducedMotion={reducedMotion}
+                  onSelect={selectPlace} onMapClick={setStartPoint} onViewChange={onViewChange}
+                  onTileError={() => notify("Kartenkacheln laden nicht. Verbindung prüfen; Liste und Suche funktionieren weiter.", "error")} />
+              </Suspense>
+            </MapErrorBoundary>
+          </div>
+          <div className="map-tools">
+            <p className="map-tools-hint">Klick in die Karte setzt einen Startpunkt.</p>
+            <button className="btn btn-secondary btn-small" type="button" onClick={startAtMapCenter}>Kartenmitte als Start</button>
+            {url.start && <button className="btn btn-secondary btn-small" type="button" onClick={removeStart}>Startpunkt entfernen</button>}
+            {routeActive && <button className="btn btn-secondary btn-small" type="button" onClick={() => commit({ route: false })}>Route entfernen</button>}
           </div>
 
           {selected ? (
-            <section className="detail-card" aria-label="Ausgewählte Einrichtung">
+            <section className="detail-card" aria-labelledby="detail-title">
               <span className="detail-mark"><CategoryShape category={selected.category} /></span>
               <div className="detail-body">
                 <p className="eyebrow">{CATEGORIES[selected.category]?.label}</p>
-                <h2>{selected.name}</h2>
+                <h3 id="detail-title">{selected.name}</h3>
                 <p>{selected.address}</p>
+                {route.status === "success" && <p className="detail-route">Route ab {start.label}: {formatDistance(route.distance)} · ca. {formatDuration(route.duration)}</p>}
               </div>
               <div className="detail-actions">
-                <button className="btn" type="button" onClick={() => toggleSaved(selected)}>{isSaved(selected) ? "★ Entfernen" : "☆ Merken"}</button>
-                <button className="btn btn-secondary" type="button" onClick={() => navigateTo(userPosition?.position ? { lat: userPosition.position[0], lng: userPosition.position[1] } : null, { lat: selected.lat, lng: selected.lng })} disabled={routeBusy}>{routeBusy ? "Route…" : "Route hierher"}</button>
+                <button className="btn" type="button" onClick={() => toggleSaved(selected)}>
+                  {selectedSaved
+                    ? <><span aria-hidden="true">★</span> Entfernen <span className="sr-only">aus Favoriten</span></>
+                    : <><span aria-hidden="true">☆</span> Merken</>}
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={requestRoute} disabled={route.status === "loading"}>
+                  {route.status === "loading" ? busyLabel("Route…") : "Route hierher"}
+                </button>
               </div>
             </section>
           ) : (
             <div className="detail-card detail-card-empty swiss-diagonal">
-              <p>Keine Einrichtung ausgewählt. Marker oder Listeneintrag wählen.</p>
+              <p>Keine Einrichtung ausgewählt. Eintrag in der Liste oder Marker auf der Karte wählen.</p>
             </div>
           )}
-          <p className={notice ? "status active" : "status"} role="status" aria-live="polite">{notice}</p>
+          <div ref={statusRef} tabIndex={-1} className={`status${notice ? " active" : ""}${notice?.tone === "error" ? " error" : ""}`}
+            onFocus={() => hold(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) hold(false) }}>
+            <p role="status">{notice?.text}</p>
+            {notice?.action && <button className="text-button" type="button" onClick={runNoticeAction}>{notice.action.label}</button>}
+          </div>
         </section>
       </div>
-    </main>
+    </div>
   )
 }

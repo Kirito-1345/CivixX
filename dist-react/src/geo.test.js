@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import test from "node:test"
+import { test } from "vitest"
 import { byDistanceThenName, distance } from "./geo.js"
 
 test("distance: Augustusplatz → Hauptbahnhof ist rund 700 m", () => {
